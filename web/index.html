@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0e0d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TrainSync">
+  <meta name="description" content="Séances Hevy et Garmin, analyses et recommandations dans une seule app web.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>TrainSync — Hevy + Garmin</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">TS</div>
+      <div>
+        <p class="eyebrow">HEVY + GARMIN</p>
+        <h1>TrainSync</h1>
+      </div>
+      <button class="icon-button" id="syncButton" aria-label="Synchroniser les séances" title="Synchroniser">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-5V2M4 17h5v5M19 12a7 7 0 0 0-12-5L4 10M5 12a7 7 0 0 0 12 5l3-3"/></svg>
+      </button>
+    </header>
+
+    <div id="statusBar" class="status-bar" hidden></div>
+
+    <main id="app" tabindex="-1">
+      <section class="view is-active" id="sessionsView" data-view="sessions" aria-labelledby="sessionsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">HISTORIQUE</p>
+            <h2 id="sessionsTitle">Tes séances</h2>
+          </div>
+          <button class="primary-button compact" id="openAddSession">+ Ajouter</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Filtrer par source">
+          <button class="is-selected" data-filter="all">Toutes</button>
+          <button data-filter="Hevy">Hevy</button>
+          <button data-filter="Garmin">Garmin</button>
+        </div>
+        <div id="sessionsList" class="session-list" aria-live="polite"></div>
+      </section>
+
+      <section class="view" id="analysisView" data-view="analysis" aria-labelledby="analysisTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">28 DERNIERS JOURS</p>
+            <h2 id="analysisTitle">Analyse</h2>
+          </div>
+          <span class="live-pill"><span></span> À jour</span>
+        </div>
+        <div id="metricGrid" class="metric-grid"></div>
+        <article class="panel chart-panel">
+          <div class="panel-title">
+            <div><p class="eyebrow">RYTHME</p><h3>Charge hebdomadaire</h3></div>
+            <span>minutes</span>
+          </div>
+          <div id="weeklyChart" class="bar-chart" role="img" aria-label="Minutes d’entraînement par semaine"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><div><p class="eyebrow">ÉQUILIBRE</p><h3>Répartition</h3></div></div>
+          <div id="categoryBreakdown" class="breakdown"></div>
+        </article>
+      </section>
+
+      <section class="view" id="coachView" data-view="coach" aria-labelledby="coachTitle">
+        <div class="coach-intro">
+          <div class="spark" aria-hidden="true">✦</div>
+          <p class="eyebrow">COACH ADAPTATIF</p>
+          <h2 id="coachTitle">Que faire ensuite&nbsp;?</h2>
+          <p>Les propositions s’appuient sur tes dernières séances et ton objectif du moment.</p>
+          <label class="field-label" for="goalSelect">Objectif</label>
+          <select id="goalSelect">
+            <option value="balanced">Équilibre</option>
+            <option value="strength">Force</option>
+            <option value="muscle">Prise de muscle</option>
+            <option value="endurance">Endurance</option>
+            <option value="recovery">Récupération</option>
+          </select>
+          <button class="primary-button" id="generateButton">✦ Générer mes séances</button>
+        </div>
+        <div id="suggestionsList" class="suggestion-list" aria-live="polite"></div>
+      </section>
+
+      <section class="view" id="settingsView" data-view="settings" aria-labelledby="settingsTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">CONNEXIONS</p><h2 id="settingsTitle">Réglages</h2></div>
+        </div>
+
+        <article class="panel settings-card">
+          <div class="source-logo hevy">H</div>
+          <div><h3>Importer Hevy</h3><p>Choisis un export CSV ou JSON depuis Hevy.</p></div>
+          <label class="secondary-button file-button">Importer<input id="hevyImport" type="file" accept=".csv,.json,text/csv,application/json"></label>
+        </article>
+
+        <article class="panel settings-card">
+          <div class="source-logo garmin">G</div>
+          <div><h3>Importer Garmin</h3><p>Choisis l’export CSV ou JSON de Garmin Connect.</p></div>
+          <label class="secondary-button file-button">Importer<input id="garminImport" type="file" accept=".csv,.json,text/csv,application/json"></label>
+        </article>
+
+        <article class="panel form-panel">
+          <p class="eyebrow">SYNCHRONISATION AUTOMATIQUE</p>
+          <h3>Relais sécurisé</h3>
+          <p class="muted">Facultatif. Il permet au site de récupérer Hevy et de demander des suggestions à ChatGPT sans exposer tes clés.</p>
+          <label class="field-label" for="syncEndpoint">Adresse du relais</label>
+          <input id="syncEndpoint" type="url" inputmode="url" placeholder="https://…/sessions">
+          <label class="field-label" for="coachEndpoint">Adresse du coach</label>
+          <input id="coachEndpoint" type="url" inputmode="url" placeholder="https://…/recommend">
+          <label class="field-label" for="relayToken">Jeton du relais</label>
+          <input id="relayToken" type="password" autocomplete="off" placeholder="Facultatif">
+          <p class="security-note">Ne mets jamais une clé Hevy ou OpenAI directement ici.</p>
+          <button class="primary-button" id="saveSettings">Enregistrer</button>
+        </article>
+
+        <article class="panel install-panel">
+          <p class="eyebrow">INSTALLATION IPHONE</p>
+          <h3>Ajouter à l’écran d’accueil</h3>
+          <ol>
+            <li>Ouvre ce site dans Safari.</li>
+            <li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li>
+            <li>Choisis <strong>Sur l’écran d’accueil</strong>.</li>
+          </ol>
+          <button class="secondary-button full" id="installButton" hidden>Installer l’application</button>
+        </article>
+
+        <button class="danger-button" id="resetData">Réinitialiser les données locales</button>
+        <p class="version" id="versionLabel"></p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navigation principale">
+      <button class="is-active" data-target="sessions" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>Séances</span>
+      </button>
+      <button data-target="analysis">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg><span>Analyse</span>
+      </button>
+      <button data-target="coach">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg><span>Coach</span>
+      </button>
+      <button data-target="settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.8-1.8.9-1.9L15 4l-1.9.9-1.9-.8L10.5 2h-3l-.7 2.1-1.9.8L3 4 1 6.1 1.9 8l-.8 1.8-2.1.7v3l2.1.7.8 1.8L1 17.9 3 20l1.9-.9 1.9.8.7 2.1h3l.7-2.1 1.9-.8 1.9.9 2.1-2.1-.9-1.9.8-1.8z" transform="translate(3 0) scale(.75)"/></svg><span>Réglages</span>
+      </button>
+    </nav>
+  </div>
+
+  <dialog id="sessionDialog">
+    <form method="dialog" id="sessionForm">
+      <div class="dialog-heading"><h2>Ajouter une séance</h2><button value="cancel" class="icon-button" aria-label="Fermer">×</button></div>
+      <label class="field-label" for="sessionTitle">Nom</label>
+      <input id="sessionTitle" name="title" required placeholder="Course facile, Push…">
+      <div class="two-fields">
+        <div><label class="field-label" for="sessionSource">Source</label><select id="sessionSource" name="source"><option>Hevy</option><option>Garmin</option></select></div>
+        <div><label class="field-label" for="sessionCategory">Type</label><select id="sessionCategory" name="category"><option>Musculation</option><option>Course</option><option>Vélo</option><option>Marche</option><option>Cardio</option><option>Autre</option></select></div>
+      </div>
+      <div class="two-fields">
+        <div><label class="field-label" for="sessionDate">Date</label><input id="sessionDate" name="date" type="datetime-local" required></div>
+        <div><label class="field-label" for="sessionDuration">Durée (min)</label><input id="sessionDuration" name="duration" type="number" min="1" value="45" required></div>
+      </div>
+      <div class="two-fields">
+        <div><label class="field-label" for="sessionDistance">Distance (km)</label><input id="sessionDistance" name="distance" type="number" min="0" step="0.01"></div>
+        <div><label class="field-label" for="sessionVolume">Volume (kg)</label><input id="sessionVolume" name="volume" type="number" min="0" step="1"></div>
+      </div>
+      <button value="default" class="primary-button" type="submit">Enregistrer la séance</button>
+    </form>
+  </dialog>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

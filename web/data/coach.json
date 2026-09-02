@@ -1,0 +1,45 @@
+{
+  "updatedAt": "2026-09-02T01:45:00Z",
+  "suggestions": [
+    {
+      "id": "coach-strength-001",
+      "kind": "Musculation",
+      "title": "Bas du corps — progression contrôlée",
+      "rationale": "Le haut du corps a été stimulé récemment ; cette séance rééquilibre la semaine avec une charge maîtrisée.",
+      "durationMinutes": 55,
+      "intensity": "RPE 7",
+      "steps": [
+        "Squat : 4 × 6 à RPE 7",
+        "Soulevé de terre roumain : 3 × 8",
+        "Fentes bulgares : 3 × 10 par jambe",
+        "Gainage : 3 × 45 secondes"
+      ]
+    },
+    {
+      "id": "coach-cardio-001",
+      "kind": "Cardio",
+      "title": "Footing facile en zone 2",
+      "rationale": "Une sortie basse intensité complète le volume cardio sans gêner la récupération musculaire.",
+      "durationMinutes": 40,
+      "intensity": "Facile",
+      "steps": [
+        "8 minutes d’échauffement progressif",
+        "27 minutes en aisance respiratoire",
+        "5 minutes très faciles"
+      ]
+    },
+    {
+      "id": "coach-recovery-001",
+      "kind": "Récupération",
+      "title": "Mobilité + marche",
+      "rationale": "Option légère à choisir si la fatigue perçue ou les courbatures sont élevées aujourd’hui.",
+      "durationMinutes": 30,
+      "intensity": "Très facile",
+      "steps": [
+        "20 minutes de marche",
+        "5 minutes de mobilité des hanches",
+        "5 minutes de mobilité des épaules"
+      ]
+    }
+  ]
+}
