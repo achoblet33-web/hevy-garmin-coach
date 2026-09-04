@@ -7,7 +7,7 @@
   const HISTORY_CAP = 5000;
   let dbPromise = null;
 
-  const previousPersistState = persistState;
+  const previousRenderAll = renderAll;
   const previousRenderSuggestions = renderSuggestions;
 
   function openHistoryDb() {
@@ -62,6 +62,13 @@
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessions: recent.slice(0, 60), suggestions: state.suggestions || [], demo: false })); } catch {}
     }
     saveHistory(state.sessions);
+  };
+
+  renderAll = function() {
+    previousRenderAll();
+    renderHistoryStatus();
+    const version = $("#versionLabel");
+    if (version) version.textContent = `TrainSync ${UI_VERSION} · historique complet · progression anatomique`;
   };
 
   synchronize = async function({ quietStart = false, forceFull = false } = {}) {
@@ -177,7 +184,6 @@
     state.sessions = [...map.values()].sort((a,b) => new Date(b.startedAt)-new Date(a.startedAt)).slice(0, HISTORY_CAP);
     state.demo = false;
     renderAll();
-    renderHistoryStatus();
   }
 
   function enforceCoreStats() {
@@ -192,15 +198,15 @@
       if (!section) {
         section = document.createElement("section");
         section.className = "pinned-stats";
-        section.innerHTML = '<div class="detail-section-title"><div><p class="eyebrow">RÉSUMÉ</p><h3>Essentiel + mes favoris</h3></div><span>Essentiel</span></div><div class="pinned-stat-grid"></div>';
+        section.innerHTML = '<div class="detail-section-title"><div><p class="eyebrow">RÉSUMÉ</p><h3>Essentiel + mes favoris</h3></div><span>Fixe + ♥</span></div><div class="pinned-stat-grid"></div>';
         const hero = content.querySelector(".detail-hero");
         hero?.insertAdjacentElement("afterend", section);
       }
       const grid = section.querySelector(".pinned-stat-grid");
       const title = section.querySelector("h3");
       const badge = section.querySelector(".detail-section-title > span");
-      if (title) title.textContent = "Essentiel + mes favoris";
-      if (badge) badge.textContent = "Fixe + ♥";
+      if (title && title.textContent !== "Essentiel + mes favoris") title.textContent = "Essentiel + mes favoris";
+      if (badge && badge.textContent !== "Fixe + ♥") badge.textContent = "Fixe + ♥";
 
       cards.forEach(card => {
         const label = card.querySelector(":scope > span")?.textContent?.trim();
@@ -208,7 +214,7 @@
         if (card.parentElement !== grid) grid?.prepend(card);
         card.classList.add("is-core-stat");
         const heart = card.querySelector(".heart-button");
-        if (heart) {
+        if (heart && !heart.hidden) {
           heart.hidden = true;
           heart.setAttribute("aria-hidden", "true");
         }
