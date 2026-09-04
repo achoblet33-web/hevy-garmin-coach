@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TrainSync">
-  <meta name="description" content="Séances Hevy et Garmin, cartes, analyses et recommandations dans une seule app web.">
+  <meta name="description" content="Séances Hevy et Garmin, cartes, analyses, statistiques favorites et coach exécutable.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="./connection.css">
   <link rel="stylesheet" href="./v13.css">
   <link rel="stylesheet" href="./v14.css">
+  <link rel="stylesheet" href="./v15.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <title>TrainSync — Hevy + Garmin</title>
 </head>
@@ -47,7 +48,7 @@
       <section class="view" id="coachView" data-view="coach" aria-labelledby="coachTitle">
         <div class="coach-intro">
           <div class="spark" aria-hidden="true">✦</div><p class="eyebrow">COACH ADAPTATIF</p><h2 id="coachTitle">Que faire ensuite&nbsp;?</h2>
-          <p>Le coach croise tes séances Hevy, Garmin et ton équilibre de charge pour proposer la suite la plus cohérente.</p>
+          <p>Le coach croise tes séances Hevy, Garmin et ton équilibre de charge pour proposer la suite et la rendre directement exécutable.</p>
           <label class="field-label" for="goalSelect">Objectif</label>
           <select id="goalSelect"><option value="balanced">Équilibre</option><option value="strength">Force</option><option value="muscle">Prise de muscle</option><option value="endurance">Endurance</option><option value="recovery">Récupération</option></select>
           <button class="primary-button" id="generateButton">✦ Générer mes séances</button>
@@ -65,6 +66,7 @@
           <input id="relayToken" type="password" autocomplete="off" placeholder="Jeton de connexion Cloudflare">
           <div class="connection-actions"><button class="primary-button" id="connectButton">Connecter et synchroniser</button><button class="secondary-button full" id="syncNowButton">Synchroniser maintenant</button><button class="secondary-button full" id="disconnectButton">Oublier le jeton</button></div>
           <p class="worker-note">Backend fixe : <strong>hevy-garmin-coach.planetpizza.workers.dev</strong></p>
+          <p class="muted">Pour recevoir les séances de course sur ta montre, active aussi <strong>Upload planned workouts</strong> dans la connexion Garmin d’Intervals.icu.</p>
         </article>
 
         <article class="panel install-panel"><p class="eyebrow">INSTALLATION IPHONE</p><h3>Ajouter à l’écran d’accueil</h3><ol><li>Ouvre ce site dans Safari.</li><li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li><li>Choisis <strong>Sur l’écran d’accueil</strong>.</li></ol><button class="secondary-button full" id="installButton" hidden>Installer l’application</button></article>
@@ -84,5 +86,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="./app.js" defer></script>
   <script src="./enriched.js" defer></script>
+  <script src="./v15.js" defer></script>
 </body>
 </html>
