@@ -1,0 +1,20 @@
+.connection-panel { border-color: rgba(184,255,61,.22); }
+.connection-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.connection-badge { flex:none; padding:7px 10px; border-radius:999px; font-size:.7rem; font-weight:850; border:1px solid var(--line); }
+.connection-badge.ok { color:var(--green); background:rgba(84,230,155,.08); border-color:rgba(84,230,155,.22); }
+.connection-badge.error { color:var(--red); background:rgba(255,107,107,.08); border-color:rgba(255,107,107,.22); }
+.connection-badge.checking { color:var(--orange); background:rgba(255,158,70,.08); border-color:rgba(255,158,70,.22); }
+.connection-badge.off { color:var(--muted); background:var(--surface-2); }
+.connection-details { display:grid; gap:8px; margin:16px 0 6px; }
+.connection-row { display:flex; align-items:center; gap:10px; padding:10px 11px; border-radius:13px; background:var(--surface-2); border:1px solid var(--line); }
+.connection-row > div { min-width:0; display:grid; gap:2px; }
+.connection-row strong { font-size:.82rem; }
+.connection-row small { color:var(--muted); font-size:.72rem; overflow-wrap:anywhere; }
+.status-dot { width:9px; height:9px; flex:none; border-radius:50%; background:var(--muted); }
+.status-dot.ok { background:var(--green); box-shadow:0 0 12px rgba(84,230,155,.45); }
+.status-dot.error { background:var(--red); box-shadow:0 0 12px rgba(255,107,107,.35); }
+.status-dot.checking { background:var(--orange); }
+.status-dot.off { background:#59625d; }
+.connection-actions { display:grid; gap:8px; margin-top:14px; }
+.worker-note { margin:13px 0 0; color:var(--muted); font-size:.7rem; line-height:1.45; overflow-wrap:anywhere; }
+.settings-subtitle { margin:22px 2px 10px; color:var(--muted); font-size:.72rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
