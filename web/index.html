@@ -7,12 +7,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TrainSync">
-  <meta name="description" content="Séances Hevy et Garmin, analyses et recommandations dans une seule app web.">
+  <meta name="description" content="Séances Hevy et Garmin, cartes, analyses et recommandations dans une seule app web.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./connection.css">
+  <link rel="stylesheet" href="./v13.css">
+  <link rel="stylesheet" href="./v14.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <title>TrainSync — Hevy + Garmin</title>
 </head>
 <body>
@@ -25,24 +28,26 @@
       </button>
     </header>
     <div id="statusBar" class="status-bar" hidden></div>
+
     <main id="app" tabindex="-1">
       <section class="view is-active" id="sessionsView" data-view="sessions" aria-labelledby="sessionsTitle">
-        <div class="section-heading"><div><p class="eyebrow">HISTORIQUE</p><h2 id="sessionsTitle">Tes séances</h2></div><button class="primary-button compact" id="openAddSession">+ Ajouter</button></div>
+        <div class="section-heading"><div><p class="eyebrow">HISTORIQUE SYNCHRONISÉ</p><h2 id="sessionsTitle">Tes séances</h2></div></div>
         <div class="segmented" role="group" aria-label="Filtrer par source"><button class="is-selected" data-filter="all">Toutes</button><button data-filter="Hevy">Hevy</button><button data-filter="Garmin">Garmin</button></div>
         <div id="sessionsList" class="session-list" aria-live="polite"></div>
       </section>
 
       <section class="view" id="analysisView" data-view="analysis" aria-labelledby="analysisTitle">
         <div class="section-heading"><div><p class="eyebrow">28 DERNIERS JOURS</p><h2 id="analysisTitle">Analyse</h2></div><span class="live-pill"><span></span> À jour</span></div>
+        <article id="loadFocusCard" class="focus-card"></article>
         <div id="metricGrid" class="metric-grid"></div>
         <article class="panel chart-panel"><div class="panel-title"><div><p class="eyebrow">RYTHME</p><h3>Charge hebdomadaire</h3></div><span>minutes</span></div><div id="weeklyChart" class="bar-chart" role="img" aria-label="Minutes d’entraînement par semaine"></div></article>
-        <article class="panel"><div class="panel-title"><div><p class="eyebrow">ÉQUILIBRE</p><h3>Répartition</h3></div></div><div id="categoryBreakdown" class="breakdown"></div></article>
+        <article class="panel"><div class="panel-title"><div><p class="eyebrow">ÉQUILIBRE</p><h3>Répartition des activités</h3></div></div><div id="categoryBreakdown" class="breakdown"></div></article>
       </section>
 
       <section class="view" id="coachView" data-view="coach" aria-labelledby="coachTitle">
         <div class="coach-intro">
           <div class="spark" aria-hidden="true">✦</div><p class="eyebrow">COACH ADAPTATIF</p><h2 id="coachTitle">Que faire ensuite&nbsp;?</h2>
-          <p>Les propositions s’appuient sur tes dernières séances Hevy et Garmin synchronisées.</p>
+          <p>Le coach croise tes séances Hevy, Garmin et ton équilibre de charge pour proposer la suite la plus cohérente.</p>
           <label class="field-label" for="goalSelect">Objectif</label>
           <select id="goalSelect"><option value="balanced">Équilibre</option><option value="strength">Force</option><option value="muscle">Prise de muscle</option><option value="endurance">Endurance</option><option value="recovery">Récupération</option></select>
           <button class="primary-button" id="generateButton">✦ Générer mes séances</button>
@@ -54,18 +59,13 @@
         <div class="section-heading"><div><p class="eyebrow">CONNEXION</p><h2 id="settingsTitle">Réglages</h2></div></div>
         <article class="panel connection-panel">
           <div class="connection-head"><div><p class="eyebrow">TRAINSYNC CLOUD</p><h3>Connexion au Worker</h3></div><span id="connectionState" class="connection-badge off">Non connecté</span></div>
-          <p class="muted">L’application mobile communique uniquement avec ton Worker Cloudflare. Tes clés Hevy, Garmin/Intervals.icu et OpenAI restent dans Cloudflare.</p>
+          <p class="muted">L’application communique uniquement avec ton Worker Cloudflare. Les clés Hevy, Intervals.icu et OpenAI restent côté serveur.</p>
           <div id="connectionDetails" class="connection-details" aria-live="polite"></div>
           <label class="field-label" for="relayToken">APP_TOKEN</label>
           <input id="relayToken" type="password" autocomplete="off" placeholder="Jeton de connexion Cloudflare">
-          <p class="security-note">Utilise uniquement APP_TOKEN ici. Ne colle jamais les clés Hevy, Intervals.icu ou OpenAI dans l’application.</p>
           <div class="connection-actions"><button class="primary-button" id="connectButton">Connecter et synchroniser</button><button class="secondary-button full" id="syncNowButton">Synchroniser maintenant</button><button class="secondary-button full" id="disconnectButton">Oublier le jeton</button></div>
           <p class="worker-note">Backend fixe : <strong>hevy-garmin-coach.planetpizza.workers.dev</strong></p>
         </article>
-
-        <p class="settings-subtitle">Import manuel de secours</p>
-        <article class="panel settings-card"><div class="source-logo hevy">H</div><div><h3>Importer Hevy</h3><p>CSV ou JSON si la synchronisation automatique est indisponible.</p></div><label class="secondary-button file-button">Importer<input id="hevyImport" type="file" accept=".csv,.json,text/csv,application/json"></label></article>
-        <article class="panel settings-card"><div class="source-logo garmin">G</div><div><h3>Importer Garmin</h3><p>CSV ou JSON en solution de secours.</p></div><label class="secondary-button file-button">Importer<input id="garminImport" type="file" accept=".csv,.json,text/csv,application/json"></label></article>
 
         <article class="panel install-panel"><p class="eyebrow">INSTALLATION IPHONE</p><h3>Ajouter à l’écran d’accueil</h3><ol><li>Ouvre ce site dans Safari.</li><li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li><li>Choisis <strong>Sur l’écran d’accueil</strong>.</li></ol><button class="secondary-button full" id="installButton" hidden>Installer l’application</button></article>
         <button class="danger-button" id="resetData">Réinitialiser les données locales</button>
@@ -81,16 +81,8 @@
     </nav>
   </div>
 
-  <dialog id="sessionDialog">
-    <form method="dialog" id="sessionForm">
-      <div class="dialog-heading"><h2>Ajouter une séance</h2><button value="cancel" class="icon-button" aria-label="Fermer">×</button></div>
-      <label class="field-label" for="sessionTitle">Nom</label><input id="sessionTitle" name="title" required placeholder="Course facile, Push…">
-      <div class="two-fields"><div><label class="field-label" for="sessionSource">Source</label><select id="sessionSource" name="source"><option>Hevy</option><option>Garmin</option></select></div><div><label class="field-label" for="sessionCategory">Type</label><select id="sessionCategory" name="category"><option>Musculation</option><option>Course</option><option>Vélo</option><option>Marche</option><option>Cardio</option><option>Autre</option></select></div></div>
-      <div class="two-fields"><div><label class="field-label" for="sessionDate">Date</label><input id="sessionDate" name="date" type="datetime-local" required></div><div><label class="field-label" for="sessionDuration">Durée (min)</label><input id="sessionDuration" name="duration" type="number" min="1" value="45" required></div></div>
-      <div class="two-fields"><div><label class="field-label" for="sessionDistance">Distance (km)</label><input id="sessionDistance" name="distance" type="number" min="0" step="0.01"></div><div><label class="field-label" for="sessionVolume">Volume (kg)</label><input id="sessionVolume" name="volume" type="number" min="0" step="1"></div></div>
-      <button value="default" class="primary-button" type="submit">Enregistrer la séance</button>
-    </form>
-  </dialog>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./enriched.js" defer></script>
 </body>
 </html>
