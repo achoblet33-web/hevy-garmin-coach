@@ -1,16 +1,16 @@
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const API_BASE = "https://hevy-garmin-coach.planetpizza.workers.dev";
 const STORAGE_KEY = "trainsync-state-v1";
 const SETTINGS_KEY = "trainsync-settings-v2";
 const LEGACY_SETTINGS_KEY = "trainsync-settings-v1";
 
 const categories = {
-  "Musculation": "◆",
-  "Course": "↗",
-  "Vélo": "◉",
-  "Marche": "→",
-  "Cardio": "♥",
-  "Autre": "●"
+  "Musculation": "🏋️",
+  "Course": "🏃",
+  "Vélo": "🚴",
+  "Marche": "🚶",
+  "Cardio": "❤️",
+  "Autre": "⚡"
 };
 
 const demoSessions = [
@@ -45,16 +45,20 @@ function loadJson(key, fallback) {
 
 function loadSettings() {
   const current = loadJson(SETTINGS_KEY, null);
-  if (current) return { relayToken: String(current.relayToken || "") };
+  if (current) return { relayToken: String(current.relayToken || ""), goal: String(current.goal || "balanced") };
   const legacy = loadJson(LEGACY_SETTINGS_KEY, {});
-  return { relayToken: String(legacy.relayToken || "") };
+  return { relayToken: String(legacy.relayToken || ""), goal: "balanced" };
 }
 
 function persistState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function persistSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ relayToken: settings.relayToken || "" })); }
+function persistSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ relayToken: settings.relayToken || "", goal: settings.goal || "balanced" })); }
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
+}
+
+function normalizeText(value = "") {
+  return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function formatCompact(value) {
@@ -62,7 +66,44 @@ function formatCompact(value) {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : Math.round(value).toString();
 }
 
+function formatPace(value) {
+  const pace = Number(value);
+  if (!Number.isFinite(pace) || pace <= 0) return "—";
+  const minutes = Math.floor(pace);
+  const seconds = Math.round((pace - minutes) * 60);
+  return `${minutes}:${String(seconds === 60 ? 0 : seconds).padStart(2, "0")}${seconds === 60 ? ` (${minutes + 1}:00)` : ""} /km`;
+}
+
+function formatNumber(value, suffix = "", digits = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toFixed(digits)}${suffix}` : "—";
+}
+
 function sourceClass(source) { return source === "Garmin" ? "garmin" : "hevy"; }
+
+function activityMeta(session = {}) {
+  const text = normalizeText([session.activityType, session.title, session.category].filter(Boolean).join(" "));
+  const has = (...words) => words.some(word => text.includes(word));
+
+  if (has("padel")) return { key: "padel", label: "Padel", icon: "🎾" };
+  if (has("plongee", "diving", "scuba")) return { key: "diving", label: "Plongée", icon: "🤿" };
+  if (has("natation", "swim", "swimming")) return { key: "swim", label: "Natation", icon: "🏊" };
+  if (has("randonnee", "hike", "hiking", "trail walking")) return { key: "hike", label: "Randonnée", icon: "🥾" };
+  if (has("trail run", "trailrun", "trail running")) return { key: "trail", label: "Trail", icon: "🏃‍♂️" };
+  if (has("run", "running", "course")) return { key: "run", label: "Course à pied", icon: "🏃" };
+  if (has("velo", "cycling", "ride", "bike", "cycl")) return { key: "bike", label: "Vélo", icon: "🚴" };
+  if (has("walk", "walking", "marche")) return { key: "walk", label: "Marche", icon: "🚶" };
+  if (has("tennis")) return { key: "tennis", label: "Tennis", icon: "🎾" };
+  if (has("football", "soccer")) return { key: "football", label: "Football", icon: "⚽" };
+  if (has("ski")) return { key: "ski", label: "Ski", icon: "🎿" };
+  if (has("snowboard")) return { key: "snowboard", label: "Snowboard", icon: "🏂" };
+  if (has("rowing", "rameur", "row ")) return { key: "rowing", label: "Rameur", icon: "🚣" };
+  if (has("yoga")) return { key: "yoga", label: "Yoga", icon: "🧘" };
+  if (has("golf")) return { key: "golf", label: "Golf", icon: "🏌️" };
+  if (has("strength", "weight", "musculation", "hevy")) return { key: "strength", label: "Musculation", icon: "🏋️" };
+  if (has("elliptical")) return { key: "elliptical", label: "Elliptique", icon: "⭕" };
+  return { key: "other", label: session.category || session.activityType || "Autre", icon: categories[session.category] || "⚡" };
+}
 
 function renderAll() {
   state.sessions.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
@@ -82,6 +123,7 @@ function renderSessions() {
     container.innerHTML = '<div class="empty-state">Aucune séance dans ce filtre.</div>';
     return;
   }
+
   let previousDay = "";
   container.innerHTML = sessions.map(session => {
     const date = new Date(session.startedAt);
@@ -90,15 +132,102 @@ function renderSessions() {
       ? `<p class="date-label">${escapeHtml(date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }))}</p>`
       : "";
     previousDay = dayKey;
+    const sport = activityMeta(session);
     const detail = session.distanceKm
       ? `${Number(session.distanceKm).toFixed(1)} km`
-      : session.volumeKg ? `${formatCompact(Number(session.volumeKg))} kg` : session.category;
-    return `${dateLabel}<article class="session-card ${sourceClass(session.source)}">
-      <div class="session-icon" aria-hidden="true">${categories[session.category] || "●"}</div>
-      <div><p class="session-title">${escapeHtml(session.title)}</p><p class="session-meta">${Number(session.durationMinutes) || 0} min · ${escapeHtml(detail)}</p></div>
-      <span class="source-badge">${escapeHtml(session.source)}</span>
+      : session.volumeKg ? `${formatCompact(Number(session.volumeKg))} kg` : sport.label;
+    return `${dateLabel}<article class="session-card ${sourceClass(session.source)}" role="button" tabindex="0" data-session-id="${escapeHtml(session.id)}" aria-label="Voir le détail de ${escapeHtml(session.title)}">
+      <div class="session-icon activity-${sport.key}" aria-hidden="true">${sport.icon}</div>
+      <div class="session-main"><p class="session-title">${escapeHtml(session.title)}</p><p class="session-meta">${escapeHtml(sport.label)} · ${Number(session.durationMinutes) || 0} min · ${escapeHtml(detail)}</p></div>
+      <div class="session-side"><span class="source-badge">${escapeHtml(session.source)}</span><span class="session-chevron">›</span></div>
     </article>`;
   }).join("");
+}
+
+function ensureEnhancedUi() {
+  if (!document.querySelector('link[href="./v13.css"]')) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "./v13.css";
+    document.head.appendChild(link);
+  }
+
+  const analysisView = $("#analysisView");
+  if (analysisView && !$("#strengthAnalysis")) {
+    analysisView.insertAdjacentHTML("beforeend", `
+      <article class="panel analysis-detail-panel"><div class="panel-title"><div><p class="eyebrow">MUSCULATION</p><h3>Progression récente</h3></div></div><div id="strengthAnalysis"></div></article>
+      <article class="panel analysis-detail-panel"><div class="panel-title"><div><p class="eyebrow">ENDURANCE</p><h3>Course & activités extérieures</h3></div></div><div id="enduranceAnalysis"></div></article>`);
+  }
+
+  if (!$("#sessionDetailDialog")) {
+    document.body.insertAdjacentHTML("beforeend", `
+      <dialog id="sessionDetailDialog" class="session-detail-dialog">
+        <div class="detail-shell">
+          <div class="detail-toolbar"><div><p class="eyebrow">DÉTAIL DE LA SÉANCE</p><h2 id="detailTitle">Séance</h2></div><button class="icon-button" id="closeSessionDetail" aria-label="Fermer">×</button></div>
+          <div id="sessionDetailContent"></div>
+        </div>
+      </dialog>`);
+    $("#closeSessionDetail")?.addEventListener("click", () => $("#sessionDetailDialog")?.close());
+    $("#sessionDetailDialog")?.addEventListener("click", event => {
+      if (event.target === $("#sessionDetailDialog")) $("#sessionDetailDialog").close();
+    });
+  }
+}
+
+function openSessionDetail(id) {
+  const session = state.sessions.find(item => String(item.id) === String(id));
+  if (!session) return;
+  const dialog = $("#sessionDetailDialog");
+  const content = $("#sessionDetailContent");
+  const title = $("#detailTitle");
+  if (!dialog || !content || !title) return;
+  title.textContent = session.title;
+  content.innerHTML = buildSessionDetail(session);
+  dialog.showModal();
+}
+
+function detailMetric(label, value) {
+  if (value == null || value === "—" || value === "") return "";
+  return `<div class="detail-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function buildSessionDetail(session) {
+  const sport = activityMeta(session);
+  const date = new Date(session.startedAt);
+  const dateText = date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const timeText = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const metrics = [
+    detailMetric("Activité", `${sport.icon} ${sport.label}`),
+    detailMetric("Durée", `${Number(session.durationMinutes) || 0} min`),
+    session.distanceKm ? detailMetric("Distance", `${Number(session.distanceKm).toFixed(2)} km`) : "",
+    session.paceMinKm ? detailMetric("Allure", formatPace(session.paceMinKm)) : "",
+    session.averageHeartRate ? detailMetric("FC moyenne", `${Math.round(session.averageHeartRate)} bpm`) : "",
+    session.maxHeartRate ? detailMetric("FC max", `${Math.round(session.maxHeartRate)} bpm`) : "",
+    session.elevationGainM ? detailMetric("Dénivelé +", `${Math.round(session.elevationGainM)} m`) : "",
+    session.calories ? detailMetric("Calories", `${Math.round(session.calories)} kcal`) : "",
+    session.trainingLoad ? detailMetric("Charge", `${Math.round(session.trainingLoad)}`) : "",
+    session.rpe ? detailMetric("RPE", `${Number(session.rpe).toFixed(1)}/10`) : "",
+    session.volumeKg ? detailMetric("Volume", `${Math.round(session.volumeKg).toLocaleString("fr-FR")} kg`) : ""
+  ].filter(Boolean).join("");
+
+  let extra = "";
+  if (Array.isArray(session.exercises) && session.exercises.length) {
+    extra = `<section class="exercise-section"><h3>Exercices</h3>${session.exercises.map((exercise, exerciseIndex) => {
+      const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
+      const rows = sets.map((set, index) => {
+        const values = [];
+        if (set.weightKg != null) values.push(`${set.weightKg} kg`);
+        if (set.reps != null) values.push(`${set.reps} rep`);
+        if (set.distanceMeters != null) values.push(`${set.distanceMeters} m`);
+        if (set.durationSeconds != null) values.push(`${set.durationSeconds} s`);
+        if (set.rpe != null) values.push(`RPE ${set.rpe}`);
+        return `<div class="set-row"><span>${index + 1}</span><strong>${escapeHtml(values.join(" × ") || set.type || "Série")}</strong></div>`;
+      }).join("");
+      return `<div class="exercise-card"><div class="exercise-heading"><span>${exerciseIndex + 1}</span><div><strong>${escapeHtml(exercise.title || "Exercice")}</strong>${exercise.notes ? `<small>${escapeHtml(exercise.notes)}</small>` : ""}</div></div><div class="set-list">${rows || '<p class="muted">Aucune série détaillée.</p>'}</div></div>`;
+    }).join("")}</section>`;
+  }
+
+  return `<div class="detail-hero"><div class="detail-sport-icon">${sport.icon}</div><div><p>${escapeHtml(dateText)} · ${escapeHtml(timeText)}</p><span>${escapeHtml(session.source)}${session.provider ? ` · ${escapeHtml(session.provider)}` : ""}</span></div></div><div class="detail-metric-grid">${metrics}</div>${extra}`;
 }
 
 function renderAnalysis() {
@@ -108,11 +237,12 @@ function renderAnalysis() {
   const totalMinutes = recent.reduce((sum, session) => sum + Number(session.durationMinutes || 0), 0);
   const totalVolume = recent.reduce((sum, session) => sum + Number(session.volumeKg || 0), 0);
   const totalDistance = recent.reduce((sum, session) => sum + Number(session.distanceKm || 0), 0);
+
   const metricGrid = $("#metricGrid");
   if (metricGrid) metricGrid.innerHTML = [
     ["⌁", recent.length, "Séances"],
     ["◷", `${Math.floor(totalMinutes / 60)}h${String(totalMinutes % 60).padStart(2, "0")}`, "Temps total"],
-    ["◆", formatCompact(totalVolume), "kg soulevés"],
+    ["🏋️", formatCompact(totalVolume), "kg soulevés"],
     ["↗", totalDistance.toFixed(1), "km parcourus"]
   ].map(metric => `<article class="metric"><div class="metric-icon">${metric[0]}</div><strong class="metric-value">${metric[1]}</strong><span class="metric-name">${metric[2]}</span></article>`).join("");
 
@@ -121,13 +251,78 @@ function renderAnalysis() {
   const chart = $("#weeklyChart");
   if (chart) chart.innerHTML = weeks.map(week => `<div class="bar-wrap"><span class="bar-value">${week.minutes}</span><div class="bar" style="height:${Math.max(3, week.minutes / maximum * 82)}%"></div><span class="bar-label">${week.label}</span></div>`).join("");
 
-  const counts = recent.reduce((result, session) => {
-    result[session.category] = (result[session.category] || 0) + 1;
+  const sportCounts = recent.reduce((result, session) => {
+    const sport = activityMeta(session);
+    if (!result[sport.label]) result[sport.label] = { count: 0, icon: sport.icon };
+    result[sport.label].count += 1;
     return result;
   }, {});
-  const maxCount = Math.max(...Object.values(counts), 1);
+  const maxCount = Math.max(...Object.values(sportCounts).map(x => x.count), 1);
   const breakdown = $("#categoryBreakdown");
-  if (breakdown) breakdown.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `<div class="breakdown-row"><p>${categories[name] || "●"} ${escapeHtml(name)}</p><span>${count} séance${count > 1 ? "s" : ""}</span><div class="progress"><span style="width:${count / maxCount * 100}%"></span></div></div>`).join("") || '<div class="empty-state">Synchronise tes séances pour commencer l’analyse.</div>';
+  if (breakdown) breakdown.innerHTML = Object.entries(sportCounts).sort((a, b) => b[1].count - a[1].count).map(([name, data]) => `<div class="breakdown-row"><p>${data.icon} ${escapeHtml(name)}</p><span>${data.count} séance${data.count > 1 ? "s" : ""}</span><div class="progress"><span style="width:${data.count / maxCount * 100}%"></span></div></div>`).join("") || '<div class="empty-state">Synchronise tes séances pour commencer l’analyse.</div>';
+
+  renderStrengthAnalysis(recent);
+  renderEnduranceAnalysis(recent);
+}
+
+function renderStrengthAnalysis(recent) {
+  const target = $("#strengthAnalysis");
+  if (!target) return;
+  const sessions = recent.filter(session => Array.isArray(session.exercises) && session.exercises.length);
+  if (!sessions.length) {
+    target.innerHTML = '<p class="muted">Aucune séance Hevy détaillée sur les 28 derniers jours.</p>';
+    return;
+  }
+  const exerciseHistory = new Map();
+  [...sessions].sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt)).forEach(session => {
+    session.exercises.forEach(exercise => {
+      const key = exercise.exerciseTemplateId || normalizeText(exercise.title);
+      const workSets = (exercise.sets || []).filter(set => set.type !== "warmup" && (set.weightKg != null || set.reps != null));
+      if (!workSets.length) return;
+      const best = [...workSets].sort((a, b) => (Number(b.weightKg || 0) - Number(a.weightKg || 0)) || (Number(b.reps || 0) - Number(a.reps || 0)))[0];
+      if (!exerciseHistory.has(key)) exerciseHistory.set(key, { title: exercise.title, entries: [] });
+      exerciseHistory.get(key).entries.push({ date: session.startedAt, best });
+    });
+  });
+  const recentExercises = [...exerciseHistory.values()].filter(item => item.entries.length).sort((a, b) => new Date(b.entries.at(-1).date) - new Date(a.entries.at(-1).date)).slice(0, 5);
+  const rows = recentExercises.map(item => {
+    const latest = item.entries.at(-1)?.best || {};
+    const previous = item.entries.at(-2)?.best || null;
+    const latestText = `${latest.weightKg ?? "—"} kg × ${latest.reps ?? "—"}`;
+    const previousText = previous ? `${previous.weightKg ?? "—"} kg × ${previous.reps ?? "—"}` : "première référence";
+    return `<div class="analysis-row"><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(previousText)} → ${escapeHtml(latestText)}</small></div><span>${latest.rpe != null ? `RPE ${latest.rpe}` : ""}</span></div>`;
+  }).join("");
+  target.innerHTML = `<div class="analysis-summary"><strong>${sessions.length}</strong><span>séance${sessions.length > 1 ? "s" : ""} · ${Math.round(sessions.reduce((sum, s) => sum + Number(s.volumeKg || 0), 0)).toLocaleString("fr-FR")} kg de volume</span></div>${rows || '<p class="muted">Pas encore assez de séries comparables.</p>'}`;
+}
+
+function renderEnduranceAnalysis(recent) {
+  const target = $("#enduranceAnalysis");
+  if (!target) return;
+  const outdoor = recent.filter(session => session.source === "Garmin" && (session.distanceKm || session.averageHeartRate || session.elevationGainM));
+  if (!outdoor.length) {
+    target.innerHTML = '<p class="muted">Aucune activité Garmin exploitable sur les 28 derniers jours.</p>';
+    return;
+  }
+  const runs = outdoor.filter(session => ["run", "trail"].includes(activityMeta(session).key));
+  const runKm = runs.reduce((sum, session) => sum + Number(session.distanceKm || 0), 0);
+  const runMinutes = runs.reduce((sum, session) => sum + Number(session.durationMinutes || 0), 0);
+  const longest = Math.max(0, ...runs.map(session => Number(session.distanceKm || 0)));
+  const avgPace = runKm > 0 ? runMinutes / runKm : null;
+  const hrValues = outdoor.map(session => Number(session.averageHeartRate)).filter(Number.isFinite);
+  const avgHr = hrValues.length ? Math.round(hrValues.reduce((a, b) => a + b, 0) / hrValues.length) : null;
+  const elevation = outdoor.reduce((sum, session) => sum + Number(session.elevationGainM || 0), 0);
+
+  const sportRows = Object.entries(outdoor.reduce((acc, session) => {
+    const sport = activityMeta(session);
+    if (!acc[sport.label]) acc[sport.label] = { icon: sport.icon, count: 0, km: 0 };
+    acc[sport.label].count += 1;
+    acc[sport.label].km += Number(session.distanceKm || 0);
+    return acc;
+  }, {})).sort((a, b) => b[1].count - a[1].count).slice(0, 5).map(([name, data]) => `<div class="analysis-row"><div><strong>${data.icon} ${escapeHtml(name)}</strong><small>${data.count} séance${data.count > 1 ? "s" : ""}</small></div><span>${data.km ? `${data.km.toFixed(1)} km` : ""}</span></div>`).join("");
+
+  target.innerHTML = `<div class="analysis-kpis">${
+    runs.length ? `<div><strong>${runKm.toFixed(1)} km</strong><span>course · ${formatPace(avgPace)}</span></div><div><strong>${longest.toFixed(1)} km</strong><span>plus longue sortie</span></div>` : ""
+  }${avgHr ? `<div><strong>${avgHr} bpm</strong><span>FC moyenne activités</span></div>` : ""}${elevation ? `<div><strong>${Math.round(elevation)} m</strong><span>dénivelé positif</span></div>` : ""}</div>${sportRows}`;
 }
 
 function weeklyBuckets(sessions) {
@@ -153,7 +348,7 @@ function renderSuggestions() {
   const suggestions = Array.isArray(state.suggestions) ? state.suggestions : [];
   container.innerHTML = suggestions.map(suggestion => {
     const className = suggestion.kind === "Cardio" ? "cardio" : suggestion.kind === "Récupération" ? "recovery" : "strength";
-    const symbol = className === "cardio" ? "↗" : className === "recovery" ? "○" : "◆";
+    const symbol = className === "cardio" ? "🏃" : className === "recovery" ? "🧘" : "🏋️";
     return `<article class="suggestion-card ${className}">
       <div class="suggestion-head"><div class="suggestion-symbol">${symbol}</div><div><p class="kind">${escapeHtml(suggestion.kind).toUpperCase()}</p><h3>${escapeHtml(suggestion.title)}</h3></div></div>
       <p>${escapeHtml(suggestion.rationale)}</p>
@@ -223,7 +418,10 @@ async function apiRequest(path, options = {}, timeoutMs = 20000) {
     return data || {};
   } catch (error) {
     if (error?.name === "AbortError") throw new Error("Le backend met trop de temps à répondre. Réessaie.");
-    if (error?.message === "Failed to fetch") throw new Error("Impossible de joindre le Worker Cloudflare. Vérifie ta connexion Internet.");
+    const message = normalizeText(error?.message || "");
+    if (message.includes("failed to fetch") || message.includes("load failed") || message.includes("networkerror")) {
+      throw new Error("La connexion au Worker a été interrompue. Vérifie le réseau puis réessaie.");
+    }
     throw error;
   } finally { clearTimeout(timer); }
 }
@@ -300,6 +498,7 @@ async function synchronize({ quietStart = false } = {}) {
 
 async function generateSuggestions() {
   const button = $("#generateButton");
+  if (!button) return;
   button.disabled = true;
   button.textContent = "Analyse en cours…";
   try {
@@ -307,10 +506,10 @@ async function generateSuggestions() {
     const data = await apiRequest("/recommend", {
       method: "POST",
       body: JSON.stringify({
-        goal: $("#goalSelect").selectedOptions[0].textContent,
+        goal: $("#goalSelect")?.selectedOptions?.[0]?.textContent || "Équilibre",
         sessions: state.sessions.filter(x => !String(x.id).startsWith("demo-")).slice(0, 40)
       })
-    }, 50000);
+    }, 90000);
     if (!Array.isArray(data.suggestions) || !data.suggestions.length) throw new Error("Le coach a répondu sans séance exploitable.");
     state.suggestions = data.suggestions;
     persistState();
@@ -372,10 +571,10 @@ function optionalNumber(value) {
 }
 
 function mapActivityCategory(value = "") {
-  const normalized = String(value).toLowerCase();
+  const normalized = normalizeText(value);
   if (normalized.includes("run") || normalized.includes("course")) return "Course";
-  if (normalized.includes("cycl") || normalized.includes("vélo") || normalized.includes("bike") || normalized.includes("ride")) return "Vélo";
-  if (normalized.includes("walk") || normalized.includes("marche") || normalized.includes("hike")) return "Marche";
+  if (normalized.includes("cycl") || normalized.includes("velo") || normalized.includes("bike") || normalized.includes("ride")) return "Vélo";
+  if (normalized.includes("walk") || normalized.includes("marche") || normalized.includes("hike") || normalized.includes("randonnee")) return "Marche";
   if (normalized.includes("strength") || normalized.includes("muscu") || normalized.includes("weight")) return "Musculation";
   return "Cardio";
 }
@@ -457,6 +656,17 @@ function setupEvents() {
     $$(".segmented button").forEach(item => item.classList.toggle("is-selected", item === button));
     renderSessions();
   }));
+
+  $("#sessionsList")?.addEventListener("click", event => {
+    const card = event.target.closest("[data-session-id]");
+    if (card) openSessionDetail(card.dataset.sessionId);
+  });
+  $("#sessionsList")?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const card = event.target.closest("[data-session-id]");
+    if (card) { event.preventDefault(); openSessionDetail(card.dataset.sessionId); }
+  });
+
   $("#openAddSession")?.addEventListener("click", () => {
     const date = new Date(); date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
     $("#sessionDate").value = date.toISOString().slice(0, 16);
@@ -469,6 +679,11 @@ function setupEvents() {
     $("#sessionDialog").close();
     event.currentTarget.reset();
     showStatus("Séance ajoutée.");
+  });
+
+  $("#goalSelect")?.addEventListener("change", event => {
+    settings.goal = event.target.value;
+    persistSettings();
   });
   $("#generateButton")?.addEventListener("click", generateSuggestions);
   $("#syncButton")?.addEventListener("click", () => synchronize());
@@ -500,7 +715,9 @@ function setupEvents() {
 }
 
 async function initialize() {
+  ensureEnhancedUi();
   if ($("#relayToken")) $("#relayToken").value = settings.relayToken || "";
+  if ($("#goalSelect")) $("#goalSelect").value = settings.goal || "balanced";
   setupEvents(); renderAll();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").then(registration => registration.update()).catch(() => {});
   if (settings.relayToken) {
