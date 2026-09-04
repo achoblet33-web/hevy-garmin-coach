@@ -1,11 +1,13 @@
-const CACHE_NAME = "trainsync-v4";
+const CACHE_NAME = "trainsync-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./connection.css",
   "./v13.css",
+  "./v14.css",
   "./app.js",
+  "./enriched.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
