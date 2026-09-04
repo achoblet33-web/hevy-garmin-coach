@@ -1,0 +1,51 @@
+.strength-planner { margin-top: 12px; overflow: hidden; }
+.planner-head, .plan-preview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.planner-head h3, .plan-preview-head h3 { margin: 2px 0 0; }
+.planner-step, .plan-preview-head > span { flex: 0 0 auto; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.planner-duration-row { margin: 16px 0 10px; }
+.planner-duration-row select { width: 100%; }
+.planner-stage-label { margin: 18px 0 8px; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.strength-focus-options { display: grid; gap: 8px; }
+.strength-focus-card { width: 100%; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 10px; align-items: center; text-align: left; padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); color: inherit; }
+.strength-focus-card.is-selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface-2)); }
+.focus-radio { width: 18px; height: 18px; border: 2px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
+.strength-focus-card.is-selected .focus-radio { border: 5px solid var(--accent); }
+.focus-copy { min-width: 0; }
+.focus-copy strong, .focus-copy small, .focus-copy em { display: block; }
+.focus-copy strong { font-size: .92rem; }
+.focus-copy small { margin-top: 3px; color: var(--muted); font-size: .72rem; }
+.focus-copy em { margin-top: 6px; color: var(--muted); font-size: .7rem; font-style: normal; line-height: 1.35; }
+.focus-count { align-self: start; white-space: nowrap; color: var(--accent); font-size: .68rem; font-weight: 800; }
+.strength-adapt-box { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.strength-adapt-box textarea { width: 100%; min-height: 74px; box-sizing: border-box; resize: vertical; margin-bottom: 10px; }
+.strength-plan-preview { margin-top: 16px; }
+.plan-rationale { color: var(--muted); font-size: .8rem; line-height: 1.5; }
+.plan-exercise-list { display: grid; gap: 10px; margin-top: 12px; }
+.plan-exercise-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); overflow: hidden; }
+.plan-exercise-head { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 9px; align-items: start; }
+.plan-exercise-number { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: .72rem; font-weight: 900; }
+.plan-exercise-head strong, .plan-exercise-head small { display: block; min-width: 0; }
+.plan-exercise-head strong { font-size: .88rem; overflow-wrap: anywhere; }
+.plan-exercise-head small { margin-top: 4px; color: var(--muted); font-size: .68rem; line-height: 1.35; }
+.novelty-pill { white-space: nowrap; padding: 5px 7px; border-radius: 999px; background: rgba(255,255,255,.05); color: var(--muted); font-size: .62rem; font-weight: 800; }
+.novelty-pill.new { color: var(--accent); }
+.novelty-pill.reintroduced { color: var(--accent); }
+.exercise-plan-note { margin: 10px 0; color: var(--muted); font-size: .72rem; line-height: 1.45; }
+.plan-set-table { width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); }
+.plan-set-row { display: grid; grid-template-columns: .55fr 1.15fr .8fr .9fr; min-width: 0; align-items: center; border-top: 1px solid var(--line); }
+.plan-set-row:first-child { border-top: 0; }
+.plan-set-row > * { min-width: 0; padding: 8px 6px; font-size: .72rem; overflow-wrap: anywhere; }
+.plan-set-row.head { background: rgba(255,255,255,.035); color: var(--muted); font-weight: 800; }
+.rest-line { margin-top: 8px; color: var(--muted); font-size: .66rem; }
+.plan-final-actions { display: grid; gap: 8px; margin-top: 14px; }
+.publish-safety { margin: 10px 0 0; color: var(--muted); font-size: .68rem; text-align: center; }
+.garmin-repair-button { margin-top: 10px; }
+.garmin-history-info { margin: 8px 0 0; font-size: .7rem; line-height: 1.4; }
+
+@media (max-width: 390px) {
+  .strength-focus-card { grid-template-columns: 18px minmax(0,1fr); }
+  .focus-count { grid-column: 2; justify-self: start; margin-top: -4px; }
+  .plan-exercise-head { grid-template-columns: 28px minmax(0,1fr); }
+  .novelty-pill { grid-column: 2; justify-self: start; }
+  .plan-set-row > * { padding: 7px 4px; font-size: .67rem; }
+}
