@@ -1,6 +1,7 @@
 const HEVY = "https://api.hevyapp.com/v1";
 const INTERVALS = "https://intervals.icu/api/v1";
 const OPENAI = "https://api.openai.com/v1/responses";
+const WORKER_VERSION = "1.2.0";
 
 export default {
   async fetch(request, env) {
@@ -8,16 +9,46 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
     if (url.pathname === "/health" && request.method === "GET") {
-      return json({ ok: true, hevy: !!env.HEVY_API_KEY, garmin: !!env.INTERVALS_API_KEY, coach: !!env.OPENAI_API_KEY });
+      return json({
+        ok: true,
+        version: WORKER_VERSION,
+        configured: {
+          auth: !!env.APP_TOKEN,
+          hevy: !!env.HEVY_API_KEY,
+          garmin: !!(env.INTERVALS_API_KEY && env.INTERVALS_ATHLETE_ID),
+          coach: !!env.OPENAI_API_KEY
+        }
+      });
     }
-    if (env.APP_TOKEN && request.headers.get("Authorization") !== `Bearer ${env.APP_TOKEN}`) {
+
+    if (!env.APP_TOKEN) return json({ error: "APP_TOKEN is not configured" }, 503);
+    if (request.headers.get("Authorization") !== `Bearer ${env.APP_TOKEN}`) {
       return json({ error: "Unauthorized" }, 401);
     }
 
     try {
-      if (url.pathname === "/sync" && request.method === "GET") {
-        return json(await syncAll(env, bounded(url.searchParams.get("days") || env.SYNC_DAYS, 120, 7, 365)));
+      if (url.pathname === "/status" && request.method === "GET") {
+        return json({
+          ok: true,
+          authenticated: true,
+          version: WORKER_VERSION,
+          configured: {
+            hevy: !!env.HEVY_API_KEY,
+            garmin: !!(env.INTERVALS_API_KEY && env.INTERVALS_ATHLETE_ID),
+            coach: !!env.OPENAI_API_KEY
+          }
+        });
       }
+
+      if (url.pathname === "/sync" && request.method === "GET") {
+        const days = bounded(url.searchParams.get("days") || env.SYNC_DAYS, 120, 7, 365);
+        const result = await syncAll(env, days);
+        const configuredCount = Object.values(result.sources).filter(x => x.configured).length;
+        const successCount = Object.values(result.sources).filter(x => x.ok).length;
+        const status = configuredCount > 0 && successCount === 0 ? 502 : 200;
+        return json({ ok: status === 200, ...result }, status);
+      }
+
       if (url.pathname === "/recommend" && request.method === "POST") {
         if (!env.OPENAI_API_KEY) return json({ error: "OPENAI_API_KEY is not configured" }, 503);
         const body = await request.json().catch(() => ({}));
@@ -25,48 +56,71 @@ export default {
         const sessions = dedupe([...(live.sessions || []), ...(Array.isArray(body.sessions) ? body.sessions : [])]);
         return recommend(env, body.goal || "Équilibre", sessions);
       }
+
       return json({ error: "Not found" }, 404);
     } catch (error) {
       console.error(error);
-      return json({ error: String(error.message || error).slice(0, 300) }, 500);
+      return json({ error: safeMessage(error) }, 500);
     }
   }
 };
 
 async function syncAll(env, days) {
-  const jobs = [];
-  if (env.HEVY_API_KEY) jobs.push(fetchHevy(env.HEVY_API_KEY, days));
-  if (env.INTERVALS_API_KEY && env.INTERVALS_ATHLETE_ID) jobs.push(fetchGarmin(env, days));
-  if (!jobs.length) return { sessions: [], sources: [], warnings: ["Configure HEVY_API_KEY et/ou Intervals.icu."] };
+  const tasks = [];
+  const sources = {
+    hevy: { configured: !!env.HEVY_API_KEY, ok: false, count: 0, error: null },
+    garmin: { configured: !!(env.INTERVALS_API_KEY && env.INTERVALS_ATHLETE_ID), ok: false, count: 0, error: null }
+  };
 
-  const results = await Promise.allSettled(jobs);
-  const sessions = [], sources = [], warnings = [];
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      sessions.push(...result.value.sessions);
-      sources.push(result.value.source);
-    } else warnings.push(String(result.reason?.message || result.reason));
+  if (sources.hevy.configured) tasks.push(runSource("hevy", () => fetchHevy(env.HEVY_API_KEY, days)));
+  if (sources.garmin.configured) tasks.push(runSource("garmin", () => fetchGarmin(env, days)));
+
+  if (!tasks.length) {
+    return {
+      sessions: [],
+      sources,
+      warnings: ["Aucune source d'entraînement n'est configurée dans Cloudflare."],
+      syncedAt: new Date().toISOString(),
+      days
+    };
   }
-  return { sessions: dedupe(sessions), sources, warnings };
+
+  const results = await Promise.all(tasks);
+  const sessions = [];
+  const warnings = [];
+
+  for (const result of results) {
+    if (result.ok) {
+      sources[result.key] = { configured: true, ok: true, count: result.sessions.length, error: null };
+      sessions.push(...result.sessions);
+    } else {
+      sources[result.key] = { configured: true, ok: false, count: 0, error: result.error };
+      warnings.push(result.error);
+    }
+  }
+
+  return { sessions: dedupe(sessions), sources, warnings, syncedAt: new Date().toISOString(), days };
+}
+
+async function runSource(key, fn) {
+  try { return { key, ok: true, sessions: await fn() }; }
+  catch (error) { return { key, ok: false, sessions: [], error: safeMessage(error) }; }
 }
 
 async function fetchHevy(apiKey, days) {
   const cutoff = Date.now() - days * 86400000;
   const workouts = [];
   for (let page = 1; page <= 50; page++) {
-    const r = await fetch(`${HEVY}/workouts?page=${page}&pageSize=10`, { headers: { "api-key": apiKey, Accept: "application/json" } });
+    const r = await fetchWithTimeout(`${HEVY}/workouts?page=${page}&pageSize=10`, { headers: { "api-key": apiKey, Accept: "application/json" } });
     if (!r.ok) throw new Error(`Hevy: HTTP ${r.status}`);
     const data = await r.json();
-    const batch = data.workouts || [];
+    const batch = Array.isArray(data.workouts) ? data.workouts : [];
     workouts.push(...batch);
-    if (page >= Number(data.page_count || page)) break;
+    if (!batch.length || page >= Number(data.page_count || page)) break;
     const oldest = Math.min(...batch.map(w => new Date(w.start_time || Date.now()).getTime()));
-    if (batch.length && oldest < cutoff) break;
+    if (Number.isFinite(oldest) && oldest < cutoff) break;
   }
-  return {
-    source: "Hevy",
-    sessions: workouts.filter(w => new Date(w.start_time || 0).getTime() >= cutoff).map(normalizeHevy)
-  };
+  return workouts.filter(w => new Date(w.start_time || 0).getTime() >= cutoff).map(normalizeHevy);
 }
 
 function normalizeHevy(w) {
@@ -80,13 +134,10 @@ function normalizeHevy(w) {
       distanceMeters: num(s.distance_meters), durationSeconds: num(s.duration_seconds)
     }))
   }));
-  const volumeKg = exercises.reduce((a, ex) => a + ex.sets.reduce((b, s) => b + (s.weightKg || 0) * (s.reps || 0), 0), 0);
+  const volumeKg = exercises.reduce((total, ex) => total + ex.sets.reduce((subtotal, s) => subtotal + (s.weightKg || 0) * (s.reps || 0), 0), 0);
   const start = iso(w.start_time || w.created_at);
   const duration = w.end_time ? Math.max(1, Math.round((new Date(w.end_time) - new Date(start)) / 60000)) : 0;
-  return {
-    id: `hevy-${w.id}`, source: "Hevy", category: "Musculation", title: w.title || "Séance Hevy",
-    startedAt: start, durationMinutes: duration, volumeKg: Math.round(volumeKg), exercises
-  };
+  return { id: `hevy-${w.id}`, source: "Hevy", category: "Musculation", title: w.title || "Séance Hevy", startedAt: start, durationMinutes: duration, volumeKg: Math.round(volumeKg), exercises };
 }
 
 async function fetchGarmin(env, days) {
@@ -94,15 +145,11 @@ async function fetchGarmin(env, days) {
   const oldest = ymd(new Date(Date.now() - days * 86400000));
   const token = btoa(`API_KEY:${env.INTERVALS_API_KEY}`);
   const endpoint = `${INTERVALS}/athlete/${encodeURIComponent(env.INTERVALS_ATHLETE_ID)}/activities?oldest=${oldest}&newest=${newest}`;
-  const r = await fetch(endpoint, { headers: { Authorization: `Basic ${token}`, Accept: "application/json", "User-Agent": "TrainSync/1.1" } });
+  const r = await fetchWithTimeout(endpoint, { headers: { Authorization: `Basic ${token}`, Accept: "application/json", "User-Agent": "TrainSync/1.2" } });
   if (!r.ok) throw new Error(`Intervals.icu: HTTP ${r.status}`);
-  const activities = await r.json();
-  return {
-    source: "Garmin via Intervals.icu",
-    sessions: (Array.isArray(activities) ? activities : [])
-      .filter(a => !(env.HEVY_API_KEY && isStrength(a.type)))
-      .map(normalizeGarmin)
-  };
+  const payload = await r.json();
+  const activities = Array.isArray(payload) ? payload : (Array.isArray(payload.activities) ? payload.activities : []);
+  return activities.filter(a => !(env.HEVY_API_KEY && isStrength(a.type || a.sport_type))).map(normalizeGarmin);
 }
 
 function normalizeGarmin(a) {
@@ -123,35 +170,12 @@ function normalizeGarmin(a) {
 
 async function recommend(env, goal, sessions) {
   const context = coachContext(sessions);
-  const prompt = `Tu es le coach de TrainSync. Propose exactement 3 prochaines séances en français, cohérentes entre elles et avec les données réelles.
-
-Règles musculation:
-- applique une surcharge progressive prudente exercice par exercice;
-- utilise charges, répétitions et RPE récents;
-- si une série récente était facile (RPE <= 8), privilégie une petite hausse de répétitions ou de charge;
-- si RPE >= 9.5 ou performance en baisse, maintiens ou réduis légèrement au lieu d'augmenter;
-- garde une continuité des exercices pour permettre la progression mesurable.
-
-Règles course:
-- utilise kilométrage, allure, fréquence cardiaque, dénivelé et charge récente;
-- construis une progression logique entre footing facile, séance de qualité et sortie longue;
-- évite une hausse brutale du volume hebdomadaire et deux séances difficiles consécutives;
-- tiens compte d'une séance jambes récente avant de programmer de l'intensité en course.
-
-Pas de diagnostic médical. Si les données sont insuffisantes, reste conservateur et indique-le.
-Objectif: ${goal}
-Contexte calculé: ${JSON.stringify(context)}
-Historique récent: ${JSON.stringify(sessions.slice(0, 40))}`;
-
-  const r = await fetch(OPENAI, {
+  const prompt = `Tu es le coach de TrainSync. Propose exactement 3 prochaines séances en français, cohérentes entre elles et avec les données réelles.\n\nRègles musculation:\n- applique une surcharge progressive prudente exercice par exercice;\n- utilise charges, répétitions et RPE récents;\n- si une série récente était facile (RPE <= 8), privilégie une petite hausse de répétitions ou de charge;\n- si RPE >= 9.5 ou performance en baisse, maintiens ou réduis légèrement au lieu d'augmenter;\n- garde une continuité des exercices pour permettre la progression mesurable.\n\nRègles course:\n- utilise kilométrage, allure, fréquence cardiaque, dénivelé et charge récente;\n- construis une progression logique entre footing facile, séance de qualité et sortie longue;\n- évite une hausse brutale du volume hebdomadaire et deux séances difficiles consécutives;\n- tiens compte d'une séance jambes récente avant de programmer de l'intensité en course.\n\nPas de diagnostic médical. Si les données sont insuffisantes, reste conservateur et indique-le.\nObjectif: ${goal}\nContexte calculé: ${JSON.stringify(context)}\nHistorique récent: ${JSON.stringify(sessions.slice(0, 40))}`;
+  const r = await fetchWithTimeout(OPENAI, {
     method: "POST",
     headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL || "gpt-5.6-luna", input: prompt, store: false,
-      reasoning: { effort: env.OPENAI_REASONING || "low" },
-      text: { format: { type: "json_schema", name: "training_suggestions", strict: true, schema: SCHEMA } }
-    })
-  });
+    body: JSON.stringify({ model: env.OPENAI_MODEL || "gpt-5.6-luna", input: prompt, store: false, reasoning: { effort: env.OPENAI_REASONING || "low" }, text: { format: { type: "json_schema", name: "training_suggestions", strict: true, schema: SCHEMA } } })
+  }, 45000);
   const data = await r.json();
   if (!r.ok) throw new Error(data.error?.message || `OpenAI: HTTP ${r.status}`);
   const text = data.output_text || data.output?.flatMap(x => x.content || []).find(x => x.type === "output_text")?.text;
@@ -170,7 +194,6 @@ function coachContext(sessions) {
       if (sets.length) strength.get(key).history.push({ date: s.startedAt, sets, volumeKg: Math.round(sets.reduce((n, x) => n + (x.weightKg || 0) * (x.reps || 0), 0)) });
     }
   }
-
   const runs = recent.filter(x => x.category === "Course");
   const now = Date.now();
   const km = maxAge => runs.filter(r => now - new Date(r.startedAt) <= maxAge * 86400000).reduce((n, r) => n + (r.distanceKm || 0), 0);
@@ -199,19 +222,22 @@ const SCHEMA = {
   }
 };
 
-function dedupe(items) {
-  const m = new Map();
-  for (const x of items) m.set(String(x.id || `${x.source}-${x.startedAt}-${x.title}`), x);
-  return [...m.values()].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  catch (error) { if (error?.name === "AbortError") throw new Error("Service distant: délai dépassé"); throw error; }
+  finally { clearTimeout(timer); }
 }
-function category(v = "") { const s = v.toLowerCase(); if (s.includes("run")) return "Course"; if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) return "Vélo"; if (s.includes("walk") || s.includes("hike")) return "Marche"; if (isStrength(s)) return "Musculation"; return "Cardio"; }
+function safeMessage(error) { return String(error?.message || error || "Erreur inconnue").replace(/Bearer\s+\S+/gi, "Bearer [redacted]").slice(0, 300); }
+function dedupe(items) { const map = new Map(); for (const item of items) map.set(String(item.id || `${item.source}-${item.startedAt}-${item.title}`), item); return [...map.values()].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt)); }
+function category(v = "") { const s = String(v).toLowerCase(); if (s.includes("run")) return "Course"; if (s.includes("ride") || s.includes("bike") || s.includes("cycl")) return "Vélo"; if (s.includes("walk") || s.includes("hike")) return "Marche"; if (isStrength(s)) return "Musculation"; return "Cardio"; }
 function isStrength(v = "") { const s = String(v).toLowerCase(); return s.includes("weight") || s.includes("strength") || s === "workout"; }
 function num(v) { if (v == null || v === "") return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
-function first(...v) { for (const x of v) { const n = num(x); if (n != null) return n; } return null; }
+function first(...values) { for (const value of values) { const n = num(value); if (n != null) return n; } return null; }
 function round(v, d = 2) { if (!Number.isFinite(v)) return null; const f = 10 ** d; return Math.round(v * f) / f; }
 function iso(v) { const d = new Date(v || Date.now()); return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString(); }
 function ymd(d) { return d.toISOString().slice(0, 10); }
 function bounded(v, fallback, min, max) { const n = Number.parseInt(v, 10); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback; }
-
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Cache-Control": "no-store" };
 function json(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" } }); }
