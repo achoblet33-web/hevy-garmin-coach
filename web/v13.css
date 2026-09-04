@@ -1,0 +1,54 @@
+.session-card[role="button"] { cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
+.session-card[role="button"]:active { transform: scale(.992); }
+.session-card[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.session-main { min-width: 0; }
+.session-side { display: grid; justify-items: end; gap: 6px; }
+.session-chevron { color: var(--muted); font-size: 1.35rem; line-height: .7; }
+.session-icon { font-size: 1.45rem; }
+
+.session-detail-dialog { width: min(calc(100% - 18px), 680px); max-height: min(88vh, 900px); padding: 0; overflow: hidden; border-radius: 28px; }
+.detail-shell { max-height: min(88vh, 900px); overflow-y: auto; padding: 20px; }
+.detail-toolbar { position: sticky; top: -20px; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: -20px -20px 16px; padding: 20px 20px 14px; background: rgba(19,23,21,.94); border-bottom: 1px solid var(--line); backdrop-filter: blur(18px); }
+.detail-toolbar h2 { max-width: 520px; font-size: 1.45rem; line-height: 1.08; }
+.detail-toolbar .icon-button { margin: 0; flex: 0 0 auto; font-size: 1.5rem; }
+.detail-hero { display: grid; grid-template-columns: 58px 1fr; gap: 14px; align-items: center; margin-bottom: 16px; }
+.detail-sport-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 18px; background: var(--surface-2); font-size: 1.8rem; }
+.detail-hero p { margin: 0 0 5px; font-weight: 800; text-transform: capitalize; }
+.detail-hero span { color: var(--muted); font-size: .8rem; }
+.detail-metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
+.detail-metric { min-height: 82px; padding: 13px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+.detail-metric span { display: block; margin-bottom: 9px; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.detail-metric strong { display: block; font-size: 1rem; }
+.exercise-section { margin-top: 18px; }
+.exercise-section > h3 { margin-bottom: 10px; }
+.exercise-card { margin-bottom: 9px; padding: 14px; border-radius: 17px; background: var(--surface-2); border: 1px solid var(--line); }
+.exercise-heading { display: grid; grid-template-columns: 30px 1fr; gap: 9px; align-items: start; }
+.exercise-heading > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; color: var(--accent-ink); background: var(--accent); font-size: .72rem; font-weight: 900; }
+.exercise-heading strong, .exercise-heading small { display: block; }
+.exercise-heading small { margin-top: 4px; color: var(--muted); font-size: .72rem; line-height: 1.35; }
+.set-list { display: grid; gap: 5px; margin-top: 12px; }
+.set-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; min-height: 35px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.025); }
+.set-row span { color: var(--muted); font-size: .72rem; }
+.set-row strong { font-size: .82rem; }
+
+.analysis-detail-panel { margin-top: 10px; }
+.analysis-summary { display: flex; align-items: baseline; gap: 9px; margin-bottom: 12px; padding: 13px; border-radius: 16px; background: var(--surface-2); }
+.analysis-summary strong { font-size: 1.8rem; letter-spacing: -.05em; }
+.analysis-summary span { color: var(--muted); font-size: .78rem; }
+.analysis-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+.analysis-row:last-child { border-bottom: 0; }
+.analysis-row div { min-width: 0; }
+.analysis-row strong, .analysis-row small { display: block; }
+.analysis-row strong { font-size: .86rem; }
+.analysis-row small { margin-top: 4px; color: var(--muted); font-size: .72rem; white-space: normal; }
+.analysis-row > span { flex: 0 0 auto; color: var(--accent); font-size: .75rem; font-weight: 800; }
+.analysis-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+.analysis-kpis > div { min-height: 88px; padding: 13px; border-radius: 15px; background: var(--surface-2); }
+.analysis-kpis strong, .analysis-kpis span { display: block; }
+.analysis-kpis strong { margin-bottom: 7px; font-size: 1.08rem; }
+.analysis-kpis span { color: var(--muted); font-size: .7rem; line-height: 1.35; }
+
+@media (min-width: 560px) {
+  .detail-metric-grid { grid-template-columns: repeat(3, 1fr); }
+  .analysis-kpis { grid-template-columns: repeat(4, 1fr); }
+}
