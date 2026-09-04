@@ -107,15 +107,15 @@
         <article class="panel form-panel">
           <p class="eyebrow">SYNCHRONISATION AUTOMATIQUE</p>
           <h3>Relais sécurisé</h3>
-          <p class="muted">Facultatif. Il permet au site de récupérer Hevy et de demander des suggestions à ChatGPT sans exposer tes clés.</p>
+          <p class="muted">Les adresses Cloudflare sont préconfigurées. Pour ton installation personnelle, tu n’as normalement qu’à saisir le jeton APP_TOKEN créé dans Cloudflare.</p>
           <label class="field-label" for="syncEndpoint">Adresse du relais</label>
-          <input id="syncEndpoint" type="url" inputmode="url" placeholder="https://…/sessions">
+          <input id="syncEndpoint" type="url" inputmode="url" placeholder="https://…/sync">
           <label class="field-label" for="coachEndpoint">Adresse du coach</label>
           <input id="coachEndpoint" type="url" inputmode="url" placeholder="https://…/recommend">
-          <label class="field-label" for="relayToken">Jeton du relais</label>
-          <input id="relayToken" type="password" autocomplete="off" placeholder="Facultatif">
-          <p class="security-note">Ne mets jamais une clé Hevy ou OpenAI directement ici.</p>
-          <button class="primary-button" id="saveSettings">Enregistrer</button>
+          <label class="field-label" for="relayToken">Jeton du relais (APP_TOKEN)</label>
+          <input id="relayToken" type="password" autocomplete="off" placeholder="APP_TOKEN Cloudflare">
+          <p class="security-note">Ne mets jamais une clé Hevy, Intervals.icu ou OpenAI directement ici.</p>
+          <button class="primary-button" id="saveSettings">Enregistrer et tester</button>
         </article>
 
         <article class="panel install-panel">
@@ -172,5 +172,6 @@
   </dialog>
 
   <script src="./app.js" defer></script>
+  <script src="./hotfix.js" defer></script>
 </body>
 </html>
