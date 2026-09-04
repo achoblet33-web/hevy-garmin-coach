@@ -90,6 +90,9 @@
     try {
       const path = full ? "/sync?all=1" : "/sync?days=180";
       const data = await apiRequest(path, {}, full ? 90000 : 35000);
+      if (full && (data.version !== "1.6.0" || !data.history)) {
+        throw new Error("Le Worker Cloudflare 1.6.0 n’est pas encore déployé. Réessaie la synchronisation dans quelques instants.");
+      }
       const sessions = Array.isArray(data.sessions) ? data.sessions : [];
       mergeSessions(sessions);
       await saveHistory(state.sessions);
@@ -100,7 +103,7 @@
 
       if (full) {
         localStorage.setItem(HISTORY_DONE_KEY, "1");
-        localStorage.setItem(HISTORY_META_KEY, JSON.stringify(data.history || { returned: sessions.length, cap: HISTORY_CAP }));
+        localStorage.setItem(HISTORY_META_KEY, JSON.stringify(data.history));
       }
       renderHistoryStatus();
 
