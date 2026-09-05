@@ -3,6 +3,24 @@
   const RELEASE_TEXT = `TrainSync ${RELEASE} · GPS Garmin fiabilisé · cache sécurisé`;
   window.TRAINSYNC_RELEASE = RELEASE;
 
+  // v15's legacy map parser flattens nested coordinate arrays. Normalize the
+  // Worker route to objects first so every GPS point survives that parser.
+  const previousApiRequest = typeof apiRequest === "function" ? apiRequest : null;
+  if (previousApiRequest) {
+    apiRequest = async function(path, options = {}, timeout) {
+      const data = await previousApiRequest(path, options, timeout);
+      if (/^\/activity\//.test(String(path || "")) && data && Array.isArray(data.map)) {
+        data.map = data.map.map(value => {
+          if (!Array.isArray(value) || value.length < 2) return value;
+          const lat = Number(value[0]);
+          const lon = Number(value[1]);
+          return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : value;
+        });
+      }
+      return data;
+    };
+  }
+
   function applyRelease() {
     const label = document.querySelector("#versionLabel");
     if (label && label.textContent !== RELEASE_TEXT) label.textContent = RELEASE_TEXT;
