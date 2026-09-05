@@ -1,4 +1,4 @@
-const RELEASE = "194";
+const RELEASE = "195";
 const CACHE_NAME = `trainsync-release-${RELEASE}`;
 
 const RELEASE_ASSETS = [
@@ -21,6 +21,7 @@ const RELEASE_ASSETS = [
   `./v191.js?v=${RELEASE}`,
   `./v193.js?v=${RELEASE}`,
   `./v194.js?v=${RELEASE}`,
+  `./v195.js?v=${RELEASE}`,
   `./manifest.webmanifest?v=${RELEASE}`,
   "./icons/icon-192.png",
   "./icons/icon-512.png"
@@ -48,8 +49,6 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never serve a cached HTML shell. A cached index was the source of mixed
-  // TrainSync releases on iOS (e.g. v16 scripts together with v19 scripts).
   if (event.request.mode === "navigate" || event.request.destination === "document") {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
@@ -73,8 +72,5 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .catch(() => caches.match(event.request))
-  );
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
