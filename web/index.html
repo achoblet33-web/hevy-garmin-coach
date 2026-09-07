@@ -7,23 +7,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TrainSync">
-  <meta name="description" content="Séances Hevy et Garmin, cartes, analyses, historique complet, statistiques favorites et coach exécutable.">
+  <meta name="description" content="TrainSync, coach hybride Hevy + Garmin avec séances club verrouillées, programmation, analyses et historique complet.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="manifest" href="./manifest.webmanifest?v=200">
+  <link rel="manifest" href="./manifest.webmanifest?v=220">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=200">
-  <link rel="stylesheet" href="./connection.css?v=200">
-  <link rel="stylesheet" href="./v13.css?v=200">
-  <link rel="stylesheet" href="./v14.css?v=200">
-  <link rel="stylesheet" href="./v15.css?v=200">
-  <link rel="stylesheet" href="./v16.css?v=200">
-  <link rel="stylesheet" href="./v17.css?v=200">
-  <link rel="stylesheet" href="./v18.css?v=200">
-  <link rel="stylesheet" href="./v19.css?v=200">
-  <link rel="stylesheet" href="./v20.css?v=200">
+  <link rel="stylesheet" href="./styles.css?v=220">
+  <link rel="stylesheet" href="./connection.css?v=220">
+  <link rel="stylesheet" href="./v13.css?v=220">
+  <link rel="stylesheet" href="./v14.css?v=220">
+  <link rel="stylesheet" href="./v15.css?v=220">
+  <link rel="stylesheet" href="./v16.css?v=220">
+  <link rel="stylesheet" href="./v17.css?v=220">
+  <link rel="stylesheet" href="./v18.css?v=220">
+  <link rel="stylesheet" href="./v19.css?v=220">
+  <link rel="stylesheet" href="./v20.css?v=220">
+  <link rel="stylesheet" href="./v22.css?v=220">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <title>TrainSync — Hevy + Garmin</title>
+  <title>TrainSync — Hybrid Coach</title>
 </head>
 <body>
   <div class="app-shell">
@@ -72,12 +73,12 @@
           <input id="relayToken" type="password" autocomplete="off" placeholder="Jeton de connexion Cloudflare">
           <div class="connection-actions"><button class="primary-button" id="connectButton" type="button">Connecter et synchroniser</button><button class="secondary-button full" id="syncNowButton" type="button">Synchroniser maintenant</button><button class="secondary-button full" id="disconnectButton" type="button">Oublier le jeton</button></div>
           <p class="worker-note">Backend : <strong>hevy-garmin-coach.planetpizza.workers.dev</strong></p>
-          <p class="muted">Pour recevoir les séances de course sur ta montre, active <strong>Upload planned workouts</strong> dans la connexion Garmin d’Intervals.icu.</p>
+          <p class="muted">Pour recevoir les séances de course libres sur ta montre, active <strong>Upload planned workouts</strong> dans la connexion Garmin d’Intervals.icu. Les séances du club restent verrouillées et ne sont pas remplacées par TrainSync.</p>
         </article>
 
         <article class="panel install-panel"><p class="eyebrow">INSTALLATION IPHONE</p><h3>Ajouter à l’écran d’accueil</h3><ol><li>Ouvre ce site dans Safari.</li><li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li><li>Choisis <strong>Sur l’écran d’accueil</strong>.</li></ol><button class="secondary-button full" id="installButton" type="button" hidden>Installer l’application</button></article>
         <button class="danger-button" id="resetData" type="button">Réinitialiser les données locales</button>
-        <p class="version" id="versionLabel">TrainSync 2.0.0 · interface stable · Worker 1.9.5 compatible</p>
+        <p class="version" id="versionLabel">TrainSync 2.2.0 · Hybrid Coach · séances club verrouillées · Hevy + Garmin</p>
       </section>
     </main>
 
@@ -90,13 +91,14 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  <script src="./app.js?v=200" defer></script>
-  <script src="./enriched.js?v=200" defer></script>
-  <script src="./v15.js?v=200" defer></script>
-  <script src="./v16.js?v=200" defer></script>
-  <script src="./v17.js?v=200" defer></script>
-  <script src="./v18.js?v=200" defer></script>
-  <script src="./v19.js?v=200" defer></script>
-  <script src="./v20.js?v=200" defer></script>
+  <script src="./app.js?v=220" defer></script>
+  <script src="./enriched.js?v=220" defer></script>
+  <script src="./v15.js?v=220" defer></script>
+  <script src="./v16.js?v=220" defer></script>
+  <script src="./v17.js?v=220" defer></script>
+  <script src="./v18.js?v=220" defer></script>
+  <script src="./v19.js?v=220" defer></script>
+  <script src="./v20.js?v=220" defer></script>
+  <script src="./v22.js?v=220" defer></script>
 </body>
 </html>
