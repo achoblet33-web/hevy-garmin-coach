@@ -1,0 +1,324 @@
+:root {
+  --bg: #0f0e0d;
+  --surface: #191715;
+  --surface-2: #211e1a;
+  --surface-3: #2a251f;
+  --line: rgba(255,255,255,.085);
+  --text: #fffaf3;
+  --muted: #ada39a;
+  --accent: #f7c66f;
+  --accent-ink: #2a1a08;
+  --cyan: #78d6f2;
+  --orange: #ff9e74;
+  --green: #91d7a8;
+  --red: #ff7b79;
+  --radius: 24px;
+  --shadow: 0 16px 42px rgba(0,0,0,.24);
+}
+
+html { background: #0b0a09; }
+body {
+  background:
+    radial-gradient(circle at 10% -5%, rgba(255,158,116,.12), transparent 32%),
+    radial-gradient(circle at 92% 10%, rgba(247,198,111,.08), transparent 28%),
+    var(--bg);
+}
+
+.app-shell {
+  position: relative;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 78% -8%, rgba(247,198,111,.10), transparent 30%),
+    radial-gradient(circle at 5% 18%, rgba(255,158,116,.06), transparent 22%),
+    var(--bg);
+}
+
+.topbar {
+  min-height: 72px;
+  padding-inline: 17px;
+  background: rgba(15,14,13,.86);
+  border-bottom-color: rgba(255,255,255,.055);
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+}
+.topbar h1 { font-size: 1.16rem; }
+.topbar .eyebrow { color: #c9b8a8; }
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #ffd889, #f2af61);
+  box-shadow: 0 10px 26px rgba(247,198,111,.18);
+}
+.icon-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: rgba(255,255,255,.045);
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-button:active { transform: scale(.94); background: rgba(255,255,255,.09); }
+.app-shell.is-connected #syncButton { border-color: rgba(145,215,168,.24); }
+.app-shell.is-connected #syncButton::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -30px -29px 0 0;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(145,215,168,.65);
+}
+
+main { padding: 20px 15px calc(118px + env(safe-area-inset-bottom)); }
+.view { max-width: 100%; }
+.section-heading { margin: 7px 3px 16px; align-items: flex-start; }
+h2 { font-size: clamp(2rem, 8.5vw, 2.65rem); line-height: .98; }
+.view-copy {
+  margin: 8px 0 0;
+  max-width: 460px;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.segmented {
+  gap: 5px;
+  padding: 5px;
+  margin-bottom: 10px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.035);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+.segmented button {
+  min-height: 42px;
+  border-radius: 13px;
+  font-size: .82rem;
+  -webkit-tap-highlight-color: transparent;
+}
+.segmented button.is-selected {
+  color: #2d1f0c;
+  background: linear-gradient(145deg, #ffd88a, #efb65f);
+  box-shadow: 0 6px 16px rgba(247,198,111,.12);
+}
+
+.session-summary-bar {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 1px 12px;
+  margin-bottom: 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.session-summary-bar::-webkit-scrollbar { display: none; }
+.session-summary-bar > span {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  font-size: .72rem;
+}
+.session-summary-bar strong { color: var(--text); }
+.session-summary-bar .dot { width: 6px; height: 6px; border-radius: 50%; }
+.session-summary-bar .dot.hevy { background: var(--orange); }
+.session-summary-bar .dot.garmin { background: var(--cyan); }
+
+.session-list { gap: 11px; }
+.date-label { margin: 18px 5px 5px; color: #c5b6a8; }
+.session-card {
+  min-height: 82px;
+  padding: 15px;
+  border-radius: 21px;
+  background: linear-gradient(155deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
+  border-color: rgba(255,255,255,.075);
+  box-shadow: 0 10px 28px rgba(0,0,0,.13);
+  transition: transform .14s ease, border-color .14s ease, background .14s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.session-card:active { transform: scale(.985); background: rgba(255,255,255,.065); }
+.session-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.session-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: rgba(255,158,116,.11);
+}
+.session-card.garmin .session-icon { background: rgba(120,214,242,.10); }
+.session-title { margin-bottom: 6px; font-size: 1rem; letter-spacing: -.015em; }
+.session-meta { line-height: 1.35; }
+.source-badge { border: 1px solid rgba(255,158,116,.12); }
+.garmin .source-badge { border-color: rgba(120,214,242,.12); }
+.session-chevron { color: #d2c2b4; font-size: 1.3rem; }
+
+.panel, .suggestion-card, .focus-card {
+  border-color: rgba(255,255,255,.075);
+  background: linear-gradient(155deg, rgba(255,255,255,.048), rgba(255,255,255,.023));
+  box-shadow: 0 14px 34px rgba(0,0,0,.12);
+}
+.metric {
+  min-height: 132px;
+  border-color: rgba(255,255,255,.075);
+  background: linear-gradient(150deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+}
+.metric-icon { color: var(--accent); background: rgba(247,198,111,.10); }
+.bar { background: linear-gradient(180deg, #ffd985, #de9e50); box-shadow: 0 0 22px rgba(247,198,111,.08); }
+.progress span { background: linear-gradient(90deg, #f7c66f, #ff9e74); }
+
+.primary-button, .secondary-button, .danger-button {
+  min-height: 50px;
+  border-radius: 16px;
+  transition: transform .14s ease, filter .14s ease, background .14s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.primary-button {
+  color: #2b1c09;
+  background: linear-gradient(145deg, #ffd988, #efb45d);
+  box-shadow: 0 12px 26px rgba(247,198,111,.15);
+}
+.primary-button:active, .secondary-button:active, .danger-button:active { transform: scale(.985); }
+.primary-button:disabled, .secondary-button:disabled { opacity: .55; transform: none; }
+.secondary-button { background: rgba(255,255,255,.055); }
+
+.coach-intro {
+  padding: 23px 19px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 94% 5%, rgba(255,158,116,.18), transparent 35%),
+    linear-gradient(145deg, rgba(247,198,111,.14), rgba(255,255,255,.035) 55%, rgba(255,255,255,.02));
+  border-color: rgba(247,198,111,.18);
+  box-shadow: var(--shadow);
+}
+.coach-intro::after { border-color: rgba(247,198,111,.17); box-shadow: 0 0 0 25px rgba(247,198,111,.03), 0 0 0 55px rgba(247,198,111,.018); }
+.spark, .coach-step-number { background: linear-gradient(145deg, #ffd988, #f1b560); color: #2a1b08; }
+.coach-decision-card { border-color: rgba(247,198,111,.14); }
+.coach-recommendation-hero { background: rgba(247,198,111,.07); border: 1px solid rgba(247,198,111,.09); }
+.coach-type-choice {
+  min-height: 116px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.035);
+  transition: transform .14s ease, border-color .14s ease, background .14s ease;
+}
+.coach-type-choice:active { transform: scale(.985); }
+.coach-type-choice.is-selected { border-color: rgba(247,198,111,.7); background: rgba(247,198,111,.09); }
+.coach-refresh { min-width: 42px; min-height: 42px; border-radius: 14px; }
+.unified-exercise-card, .cardio-block { border-radius: 17px; background: rgba(255,255,255,.034); }
+
+input, select, textarea {
+  min-height: 50px;
+  border-radius: 15px;
+  border-color: rgba(255,255,255,.09);
+  background: #211e1a;
+  color: var(--text);
+  font: inherit;
+}
+textarea { padding: 12px 13px; }
+input:focus, select:focus, textarea:focus { border-color: rgba(247,198,111,.72); box-shadow: 0 0 0 3px rgba(247,198,111,.09); outline: none; }
+
+.bottom-nav {
+  left: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  width: min(calc(100% - 18px), 742px);
+  padding: 7px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 24px;
+  background: rgba(24,21,18,.94);
+  box-shadow: 0 18px 50px rgba(0,0,0,.38);
+  backdrop-filter: blur(24px);
+}
+.bottom-nav button {
+  min-height: 58px;
+  gap: 4px;
+  border-radius: 17px;
+  transition: background .14s ease, color .14s ease, transform .14s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.bottom-nav button:active { transform: scale(.96); }
+.bottom-nav button.is-active { color: #ffd17b; background: rgba(247,198,111,.09); }
+.bottom-nav svg { width: 23px; height: 23px; }
+
+.status-bar {
+  top: 72px;
+  color: #2a1b08;
+  background: linear-gradient(90deg, #f7c66f, #ffb376);
+  box-shadow: 0 10px 24px rgba(0,0,0,.14);
+}
+
+.session-detail-dialog {
+  overflow: hidden;
+  border-color: rgba(255,255,255,.10);
+  background: #171512;
+  box-shadow: 0 24px 90px rgba(0,0,0,.55);
+}
+.session-detail-dialog::backdrop { background: rgba(8,7,6,.76); backdrop-filter: blur(6px); }
+.detail-toolbar { background: rgba(23,21,18,.92); backdrop-filter: blur(18px); }
+.pinned-stats, .detail-section, .exercise-section { scroll-margin-top: 12px; }
+.activity-map {
+  min-height: 300px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: 0 12px 30px rgba(0,0,0,.18);
+}
+.fav-stat, .full-stat, .detail-metric {
+  background: rgba(255,255,255,.035);
+  border-color: rgba(255,255,255,.07);
+}
+.heart-button { min-width: 34px; min-height: 34px; color: #ff9c88; }
+
+.gps-availability-note {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin: 10px 0;
+  padding: 13px;
+  border: 1px solid rgba(120,214,242,.12);
+  border-radius: 17px;
+  background: rgba(120,214,242,.055);
+}
+.gps-availability-note > span { font-size: 1.25rem; color: var(--cyan); }
+.gps-availability-note > div { display: grid; gap: 4px; }
+.gps-availability-note small { color: var(--muted); line-height: 1.4; }
+
+.connection-panel { border-color: rgba(145,215,168,.12); }
+.connection-badge { border-radius: 999px; }
+.version { margin: 16px 0 2px; color: #8f857c; }
+
+@media (max-width: 520px) {
+  main { padding-inline: 13px; }
+  .topbar { padding-inline: 14px; }
+  .metric-grid { gap: 9px; }
+  .session-card { grid-template-columns: 48px minmax(0,1fr) auto; gap: 11px; }
+  .session-side { align-items: flex-end; }
+  .source-badge { font-size: .64rem; padding: 5px 7px; }
+  .session-detail-dialog {
+    width: calc(100% - 8px);
+    max-width: none;
+    max-height: 94dvh;
+    margin: auto auto 4px;
+    border-radius: 28px 28px 18px 18px;
+  }
+  .detail-shell { max-height: 94dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .activity-map { min-height: 270px; height: 34vh; max-height: 360px; }
+}
+
+@media (max-width: 370px) {
+  .session-summary-bar > span { font-size: .68rem; }
+  .session-card { padding: 13px; }
+  .session-icon { width: 46px; height: 46px; }
+  .bottom-nav { width: calc(100% - 12px); }
+  .bottom-nav button { min-height: 55px; font-size: .63rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
