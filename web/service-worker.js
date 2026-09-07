@@ -1,4 +1,4 @@
-const RELEASE = "195b";
+const RELEASE = "200";
 const CACHE_NAME = `trainsync-release-${RELEASE}`;
 
 const RELEASE_ASSETS = [
@@ -11,6 +11,7 @@ const RELEASE_ASSETS = [
   `./v17.css?v=${RELEASE}`,
   `./v18.css?v=${RELEASE}`,
   `./v19.css?v=${RELEASE}`,
+  `./v20.css?v=${RELEASE}`,
   `./app.js?v=${RELEASE}`,
   `./enriched.js?v=${RELEASE}`,
   `./v15.js?v=${RELEASE}`,
@@ -18,10 +19,7 @@ const RELEASE_ASSETS = [
   `./v17.js?v=${RELEASE}`,
   `./v18.js?v=${RELEASE}`,
   `./v19.js?v=${RELEASE}`,
-  `./v191.js?v=${RELEASE}`,
-  `./v193.js?v=${RELEASE}`,
-  `./v194.js?v=${RELEASE}`,
-  `./v195.js?v=${RELEASE}`,
+  `./v20.js?v=${RELEASE}`,
   `./manifest.webmanifest?v=${RELEASE}`,
   "./icons/icon-192.png",
   "./icons/icon-512.png"
@@ -45,20 +43,21 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
-
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Always get a fresh HTML shell. This prevents Safari from loading a page
+  // that references an older set of TrainSync scripts.
   if (event.request.mode === "navigate" || event.request.destination === "document") {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
 
-  const isReleaseCode = event.request.destination === "script" ||
+  const isReleaseAsset = event.request.destination === "script" ||
     event.request.destination === "style" ||
     url.pathname.endsWith(".webmanifest");
 
-  if (isReleaseCode) {
+  if (isReleaseAsset) {
     event.respondWith(
       fetch(event.request, { cache: "no-store" })
         .then(response => {
