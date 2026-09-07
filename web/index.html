@@ -3,24 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0e0d">
+  <meta name="theme-color" content="#0f0e0d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TrainSync">
   <meta name="description" content="Séances Hevy et Garmin, cartes, analyses, historique complet, statistiques favorites et coach exécutable.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="manifest" href="./manifest.webmanifest?v=195b">
+  <link rel="manifest" href="./manifest.webmanifest?v=200">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=195b">
-  <link rel="stylesheet" href="./connection.css?v=195b">
-  <link rel="stylesheet" href="./v13.css?v=195b">
-  <link rel="stylesheet" href="./v14.css?v=195b">
-  <link rel="stylesheet" href="./v15.css?v=195b">
-  <link rel="stylesheet" href="./v16.css?v=195b">
-  <link rel="stylesheet" href="./v17.css?v=195b">
-  <link rel="stylesheet" href="./v18.css?v=195b">
-  <link rel="stylesheet" href="./v19.css?v=195b">
+  <link rel="stylesheet" href="./styles.css?v=200">
+  <link rel="stylesheet" href="./connection.css?v=200">
+  <link rel="stylesheet" href="./v13.css?v=200">
+  <link rel="stylesheet" href="./v14.css?v=200">
+  <link rel="stylesheet" href="./v15.css?v=200">
+  <link rel="stylesheet" href="./v16.css?v=200">
+  <link rel="stylesheet" href="./v17.css?v=200">
+  <link rel="stylesheet" href="./v18.css?v=200">
+  <link rel="stylesheet" href="./v19.css?v=200">
+  <link rel="stylesheet" href="./v20.css?v=200">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <title>TrainSync — Hevy + Garmin</title>
 </head>
@@ -28,8 +29,8 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-mark" aria-hidden="true">TS</div>
-      <div><p class="eyebrow">HEVY + GARMIN</p><h1>TrainSync</h1></div>
-      <button class="icon-button" id="syncButton" aria-label="Synchroniser les séances" title="Synchroniser">
+      <div><p class="eyebrow">HEVY · GARMIN · COACH</p><h1>TrainSync</h1></div>
+      <button class="icon-button" id="syncButton" aria-label="Synchroniser les séances" title="Synchroniser" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-5V2M4 17h5v5M19 12a7 7 0 0 0-12-5L4 10M5 12a7 7 0 0 0 12 5l3-3"/></svg>
       </button>
     </header>
@@ -38,7 +39,7 @@
     <main id="app" tabindex="-1">
       <section class="view is-active" id="sessionsView" data-view="sessions" aria-labelledby="sessionsTitle">
         <div class="section-heading"><div><p class="eyebrow">HISTORIQUE SYNCHRONISÉ</p><h2 id="sessionsTitle">Tes séances</h2></div></div>
-        <div class="segmented" role="group" aria-label="Filtrer par source"><button class="is-selected" data-filter="all">Toutes</button><button data-filter="Hevy">Hevy</button><button data-filter="Garmin">Garmin</button></div>
+        <div class="segmented" role="group" aria-label="Filtrer par source"><button class="is-selected" data-filter="all" type="button">Toutes</button><button data-filter="Hevy" type="button">Hevy</button><button data-filter="Garmin" type="button">Garmin</button></div>
         <div id="sessionsList" class="session-list" aria-live="polite"></div>
       </section>
 
@@ -53,10 +54,10 @@
       <section class="view" id="coachView" data-view="coach" aria-labelledby="coachTitle">
         <div class="coach-intro">
           <div class="spark" aria-hidden="true">✦</div><p class="eyebrow">COACH ADAPTATIF</p><h2 id="coachTitle">Que faire ensuite&nbsp;?</h2>
-          <p>Le coach croise tes séances Hevy, Garmin et ton équilibre de charge pour proposer la suite et la rendre directement exécutable.</p>
+          <p>Le coach choisit avec toi, puis prépare une séance prête à lancer.</p>
           <label class="field-label" for="goalSelect">Objectif</label>
           <select id="goalSelect"><option value="balanced">Équilibre</option><option value="strength">Force</option><option value="muscle">Prise de muscle</option><option value="endurance">Endurance</option><option value="recovery">Récupération</option></select>
-          <button class="primary-button" id="generateButton">✦ Générer mes séances</button>
+          <button class="primary-button" id="generateButton" type="button">✦ Générer mes séances</button>
         </div>
         <div id="suggestionsList" class="suggestion-list" aria-live="polite"></div>
       </section>
@@ -65,40 +66,37 @@
         <div class="section-heading"><div><p class="eyebrow">CONNEXION</p><h2 id="settingsTitle">Réglages</h2></div></div>
         <article class="panel connection-panel">
           <div class="connection-head"><div><p class="eyebrow">TRAINSYNC CLOUD</p><h3>Connexion au Worker</h3></div><span id="connectionState" class="connection-badge off">Non connecté</span></div>
-          <p class="muted">L’application communique uniquement avec ton Worker Cloudflare. Les clés Hevy, Intervals.icu et OpenAI restent côté serveur.</p>
+          <p class="muted">TrainSync communique avec ton Worker Cloudflare. Les clés Hevy, Intervals.icu et OpenAI restent côté serveur.</p>
           <div id="connectionDetails" class="connection-details" aria-live="polite"></div>
           <label class="field-label" for="relayToken">APP_TOKEN</label>
           <input id="relayToken" type="password" autocomplete="off" placeholder="Jeton de connexion Cloudflare">
-          <div class="connection-actions"><button class="primary-button" id="connectButton">Connecter et synchroniser</button><button class="secondary-button full" id="syncNowButton">Synchroniser maintenant</button><button class="secondary-button full" id="disconnectButton">Oublier le jeton</button></div>
-          <p class="worker-note">Backend fixe : <strong>hevy-garmin-coach.planetpizza.workers.dev</strong></p>
-          <p class="muted">Pour recevoir les séances de course sur ta montre, active aussi <strong>Upload planned workouts</strong> dans la connexion Garmin d’Intervals.icu.</p>
+          <div class="connection-actions"><button class="primary-button" id="connectButton" type="button">Connecter et synchroniser</button><button class="secondary-button full" id="syncNowButton" type="button">Synchroniser maintenant</button><button class="secondary-button full" id="disconnectButton" type="button">Oublier le jeton</button></div>
+          <p class="worker-note">Backend : <strong>hevy-garmin-coach.planetpizza.workers.dev</strong></p>
+          <p class="muted">Pour recevoir les séances de course sur ta montre, active <strong>Upload planned workouts</strong> dans la connexion Garmin d’Intervals.icu.</p>
         </article>
 
-        <article class="panel install-panel"><p class="eyebrow">INSTALLATION IPHONE</p><h3>Ajouter à l’écran d’accueil</h3><ol><li>Ouvre ce site dans Safari.</li><li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li><li>Choisis <strong>Sur l’écran d’accueil</strong>.</li></ol><button class="secondary-button full" id="installButton" hidden>Installer l’application</button></article>
-        <button class="danger-button" id="resetData">Réinitialiser les données locales</button>
-        <p class="version" id="versionLabel">TrainSync 1.9.5 · GPS Garmin fiabilisé · cache sécurisé</p>
+        <article class="panel install-panel"><p class="eyebrow">INSTALLATION IPHONE</p><h3>Ajouter à l’écran d’accueil</h3><ol><li>Ouvre ce site dans Safari.</li><li>Touche <strong>Partager</strong> <span aria-hidden="true">□↑</span>.</li><li>Choisis <strong>Sur l’écran d’accueil</strong>.</li></ol><button class="secondary-button full" id="installButton" type="button" hidden>Installer l’application</button></article>
+        <button class="danger-button" id="resetData" type="button">Réinitialiser les données locales</button>
+        <p class="version" id="versionLabel">TrainSync 2.0.0 · interface stable · Worker 1.9.5 compatible</p>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="Navigation principale">
-      <button class="is-active" data-target="sessions" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>Séances</span></button>
-      <button data-target="analysis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg><span>Analyse</span></button>
-      <button data-target="coach"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg><span>Coach</span></button>
-      <button data-target="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.8-1.8.9-1.9L15 4l-1.9.9-1.9-.8L10.5 2h-3l-.7 2.1-1.9.8L3 4 1 6.1 1.9 8l-.8 1.8-2.1.7v3l2.1.7.8 1.8L1 17.9 3 20l1.9-.9 1.9.8.7 2.1h3l.7-2.1 1.9-.8 1.9.9 2.1-2.1-.9-1.9.8-1.8z" transform="translate(3 0) scale(.75)"/></svg><span>Réglages</span></button>
+      <button class="is-active" data-target="sessions" aria-current="page" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>Séances</span></button>
+      <button data-target="analysis" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg><span>Analyse</span></button>
+      <button data-target="coach" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg><span>Coach</span></button>
+      <button data-target="settings" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.8-1.8.9-1.9L15 4l-1.9.9-1.9-.8L10.5 2h-3l-.7 2.1-1.9.8L3 4 1 6.1 1.9 8l-.8 1.8-2.1.7v3l2.1.7.8 1.8L1 17.9 3 20l1.9-.9 1.9.8.7 2.1h3l.7-2.1 1.9-.8 1.9.9 2.1-2.1-.9-1.9.8-1.8z" transform="translate(3 0) scale(.75)"/></svg><span>Réglages</span></button>
     </nav>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  <script src="./app.js?v=195b" defer></script>
-  <script src="./enriched.js?v=195b" defer></script>
-  <script src="./v15.js?v=195b" defer></script>
-  <script src="./v16.js?v=195b" defer></script>
-  <script src="./v17.js?v=195b" defer></script>
-  <script src="./v18.js?v=195b" defer></script>
-  <script src="./v19.js?v=195b" defer></script>
-  <script src="./v191.js?v=195b" defer></script>
-  <script src="./v193.js?v=195b" defer></script>
-  <script src="./v194.js?v=195b" defer></script>
-  <script src="./v195.js?v=195b" defer></script>
+  <script src="./app.js?v=200" defer></script>
+  <script src="./enriched.js?v=200" defer></script>
+  <script src="./v15.js?v=200" defer></script>
+  <script src="./v16.js?v=200" defer></script>
+  <script src="./v17.js?v=200" defer></script>
+  <script src="./v18.js?v=200" defer></script>
+  <script src="./v19.js?v=200" defer></script>
+  <script src="./v20.js?v=200" defer></script>
 </body>
 </html>
