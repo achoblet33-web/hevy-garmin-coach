@@ -1,4 +1,4 @@
-const RELEASE = "221";
+const RELEASE = "222";
 const CACHE_NAME = `trainsync-release-${RELEASE}`;
 
 const RELEASE_ASSETS = [
