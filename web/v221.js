@@ -1,5 +1,5 @@
 (() => {
-  const UI_VERSION = "2.2.1";
+  const UI_VERSION = "2.2.2";
   let muscleChoice = "coach";
 
   const CHOICES = [
@@ -91,7 +91,7 @@
     window.TRAINSYNC_RELEASE = UI_VERSION;
     document.documentElement.dataset.trainsyncVersion = UI_VERSION;
     const version = document.querySelector("#versionLabel");
-    if (version) version.textContent = `TrainSync ${UI_VERSION} · choix musculaire du jour · Coach hybride`;
+    if (version) version.textContent = `TrainSync ${UI_VERSION} · choix musculaire · publication Hevy vérifiée`;
   }
 
   function injectStyle() {
