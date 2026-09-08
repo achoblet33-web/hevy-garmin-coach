@@ -88,15 +88,26 @@ export default {
 function enrichExerciseNotes(exercise) {
   if (!exercise || typeof exercise !== "object") return exercise;
   const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
-  const targets = sets.map(formatSetTarget).filter(Boolean);
+  if (!sets.length) return exercise;
+
+  const counters = { warmup: 0, normal: 0, failure: 0, dropset: 0 };
+  const targets = sets.map(set => {
+    const type = validSetType(set?.type);
+    counters[type] = (counters[type] || 0) + 1;
+    return formatSetTarget(set, counters[type]);
+  }).filter(Boolean);
   if (!targets.length) return exercise;
 
   const existing = String(exercise.notes || "")
     .replace(/(?:^|\n)🎯 CIBLES DE SÉRIES[\s\S]*?(?=\n\n🧠 CONSIGNES|$)/i, "")
     .replace(/^\s+|\s+$/g, "");
 
-  const rpeValues = sets.map(s => finiteOrNull(s?.rpe)).filter(v => v != null);
-  const rpeRange = summarizeRpe(rpeValues);
+  const workingRpes = sets
+    .filter(s => validSetType(s?.type) !== "warmup")
+    .map(s => finiteOrNull(s?.rpe))
+    .filter(v => v != null);
+  const rpeRange = summarizeRpe(workingRpes);
+
   const header = [
     "🎯 CIBLES DE SÉRIES",
     rpeRange ? `RPE de travail prévu : ${rpeRange}` : null,
@@ -110,25 +121,21 @@ function enrichExerciseNotes(exercise) {
   return { ...exercise, notes: clip(notes, 700) };
 }
 
-function formatSetTarget(set, index) {
+function formatSetTarget(set, ordinal) {
   if (!set || typeof set !== "object") return null;
-  const type = String(set.type || "normal");
+  const type = validSetType(set.type);
   const prefix = type === "warmup" ? "W" : type === "dropset" ? "D" : type === "failure" ? "F" : "S";
-  const number = countWithinType(index, type, set.__allSets || null);
   const weight = finiteOrNull(set.weightKg);
   const reps = finiteIntOrNull(set.reps);
   const rpe = finiteOrNull(set.rpe);
   const effort = rpe != null ? `RPE ${formatNumber(rpe)}` : "RPE —";
   const load = weight != null ? `${formatNumber(weight)} kg` : "charge à calibrer";
   const repText = reps != null ? `${reps} reps` : "reps à calibrer";
-  return `${prefix}${number} · ${load} × ${repText} · ${effort}`;
+  return `${prefix}${ordinal} · ${load} × ${repText} · ${effort}`;
 }
 
-// Determine the ordinal of a set among sets of the same type without mutating the plan.
-function countWithinType(index, type) {
-  // The caller passes sets in order; using index+1 keeps the note compact and unambiguous.
-  // Hevy also renders the set order in the same sequence.
-  return index + 1;
+function validSetType(value) {
+  return ["warmup", "normal", "failure", "dropset"].includes(value) ? value : "normal";
 }
 
 function summarizeRpe(values) {
