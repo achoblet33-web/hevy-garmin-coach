@@ -1,4 +1,4 @@
-const RELEASE = "230";
+const RELEASE = "231";
 const CACHE_NAME = `trainsync-release-${RELEASE}`;
 
 const RELEASE_ASSETS = [
@@ -24,7 +24,9 @@ const RELEASE_ASSETS = [
   `./v22.js?v=${RELEASE}`,
   `./v221.js?v=${RELEASE}`,
   `./v224.js?v=${RELEASE}`,
+  `./session-fusion.js?v=${RELEASE}`,
   `./v23.js?v=${RELEASE}`,
+  `./session-fusion-ui.js?v=${RELEASE}`,
   `./manifest.webmanifest?v=${RELEASE}`,
   "./icons/icon-192.png",
   "./icons/icon-512.png"
