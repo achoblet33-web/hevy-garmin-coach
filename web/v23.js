@@ -1,5 +1,5 @@
 (() => {
-  const UI_VERSION = "2.3.0";
+  const UI_VERSION = "2.3.1";
   const PREF_KEY = "trainsync-strength-coach-v23";
   const READINESS_KEY = "trainsync-readiness-v22";
   const CLUB_KEY = "trainsync-club-running-v22";
@@ -225,9 +225,19 @@
 
   function renderExercise(ex,index) {
     return `<article class="v23-exercise"><div class="v23-ex-head"><span>${index+1}</span><div><strong>${esc(ex.title||"Exercice")}</strong><small>${esc(ex.groupLabel||"")} · ${esc(ex.equipment||"")} · repos ${Math.round(Number(ex.restSeconds||90)/30)/2} min</small></div></div>
+      ${loadContext(ex)}
       <p>${esc(ex.notes||"")}</p>
       <div class="v23-set-grid"><div class="v23-set-row head"><span>Type</span><span>Charge</span><span>Reps</span><span>RPE</span></div>${(ex.sets||[]).map((s,i)=>`<div class="v23-set-row ${esc(s.type||"normal")}"><span>${setLabel(s.type,i)}</span><strong>${s.weightKg!=null?`${fmt(s.weightKg)} kg`:"Calibration"}</strong><strong>${s.reps??"—"}</strong><span>${s.rpe!=null?fmt(s.rpe):"—"}</span></div>`).join("")}</div>
     </article>`;
+  }
+
+  function loadContext(ex) {
+    const p=ex.previousPerformance;
+    const work=(ex.sets||[]).find(set=>set.type==="normal");
+    if(!p)return '<div class="v231-load-context"><strong>Première série de calibration</strong><span>Aucune charge de référence fiable : ajuste selon le RPE cible.</span></div>';
+    const last=fmt(p.weightKg)+" kg × "+p.reps+" · "+(p.rpe!=null?"RPE "+fmt(p.rpe):"RPE non renseigné");
+    const next=work?(work.weightKg!=null?fmt(work.weightKg)+" kg":"À calibrer")+" × "+work.reps+" · RPE "+fmt(work.rpe):"À calibrer";
+    return '<div class="v231-load-context"><strong>Référence : '+esc(last)+'</strong><span>Cible : '+esc(next)+'</span><details><summary>Pourquoi cette charge ? · '+esc(ex.loadMethod||"historique")+'</summary><p>'+esc(ex.loadReason||"Ajuste selon la première série et ta récupération.")+'</p></details></div>';
   }
 
   async function publishHevy() {
@@ -257,7 +267,7 @@
   function savePrefs(){localStorage.setItem(PREF_KEY,JSON.stringify(prefs));}
   function esc(value){return String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
 
-  function setVersion(){window.TRAINSYNC_RELEASE=UI_VERSION;document.documentElement.dataset.trainsyncVersion=UI_VERSION;const label=document.querySelector("#versionLabel");if(label)label.textContent=`TrainSync ${UI_VERSION} · Coach musculation · matériel salle verrouillé`;}
+  function setVersion(){window.TRAINSYNC_RELEASE=UI_VERSION;document.documentElement.dataset.trainsyncVersion=UI_VERSION;const label=document.querySelector("#versionLabel");if(label)label.textContent=`TrainSync ${UI_VERSION} · Coach musculation · charges et RPE`;}
 
   function injectStyle(){if(document.querySelector("#v23Style"))return;const style=document.createElement("style");style.id="v23Style";style.textContent=`
     #hybridCoachV22,#unifiedCoachFlow,#strengthPlanner{display:none!important}.strength-coach-v23{display:grid;gap:14px;margin-top:14px}.v23-card{border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:17px;background:linear-gradient(145deg,rgba(255,177,92,.055),rgba(255,255,255,.022));box-shadow:0 10px 30px rgba(0,0,0,.12)}.v23-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.v23-head h3{margin:3px 0 0;font-size:19px;line-height:1.2}.v23-source{font-size:10px;color:#ffb45e;border:1px solid rgba(255,180,94,.2);background:rgba(255,180,94,.08);border-radius:999px;padding:6px 9px;white-space:nowrap}.v23-help,.v23-rationale,.v23-safe{font-size:12px;line-height:1.5;color:var(--muted,#a7aaa5)}
