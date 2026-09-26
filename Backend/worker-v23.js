@@ -1,6 +1,7 @@
 import base from "./worker-v224.js";
+import { buildStrengthHistory, calculateWorkingLoad, selectCoherentExercises } from "./strength-progression.mjs";
 
-const VERSION = "2.3.0";
+const VERSION = "2.3.1";
 const HEVY = "https://api.hevyapp.com/v1";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -102,7 +103,9 @@ export default {
         fixedGymEquipment:true,
         gymEquipmentCount:GYM_EQUIPMENT.length,
         strengthObjectives:["force","hypertrophy","endurance"],
-        delavierProgramming:true
+        delavierProgramming:true,
+        strengthLoadAutoregulation:true,
+        exerciseSequenceCoherence:true
       }, response.status);
     }
 
@@ -167,7 +170,9 @@ export default {
 
 function buildPlan({ objective, durationMinutes, groups, associationId, sessions, templates, customFocus, readiness, clubSchedule }) {
   const strengthSessions = sessions.filter(isStrengthSession);
-  const history = mapHistory(strengthSessions, templates);
+  const history = buildStrengthHistory(strengthSessions, templates).map(item => ({
+    ...item,group:groupFromTemplate(templates.find(t=>String(t.id)===item.templateId)||{}) || classifyTitle(item.title)
+  }));
   const supported = templates
     .map(t => ({ ...t, equipmentMatch:equipmentForExercise(t.title || ""), canonicalGroup:groupFromTemplate(t) }))
     .filter(t => t.equipmentMatch && groups.includes(t.canonicalGroup));
@@ -188,33 +193,15 @@ function buildPlan({ objective, durationMinutes, groups, associationId, sessions
   candidates.sort((a,b) => b.score-a.score);
 
   const targetCount = exerciseCountForDuration(durationMinutes, groups.length);
-  const selected = [];
-  const used = new Set();
+  const selected = selectCoherentExercises(candidates, groups, targetCount);
+  const uncovered=groups.filter(group=>!selected.some(candidate=>candidate.group===group));
+  if (uncovered.length) throw new Error("Aucun exercice disponible avec ton matériel pour : "+uncovered.map(g=>GROUPS[g]).join(", ")+".");
+  if (!selected.length) throw new Error("Aucun exercice Hevy compatible avec le matériel de la salle n’a été trouvé.");
 
-  // Couverture obligatoire de chaque groupe sélectionné.
-  for (const group of groups) {
-    const candidate = candidates.find(c => c.group === group && !used.has(String(c.template.id)));
-    if (candidate) { selected.push(candidate); used.add(String(candidate.template.id)); }
-  }
-
-  // Priorité aux mouvements structurants, puis aux compléments/isolation.
-  for (const candidate of candidates) {
-    if (selected.length >= targetCount) break;
-    const id = String(candidate.template.id);
-    if (used.has(id)) continue;
-    const groupCount = selected.filter(x => x.group === candidate.group).length;
-    const softCap = groups.length === 1 ? targetCount : Math.ceil(targetCount / groups.length) + 1;
-    if (groupCount >= softCap) continue;
-    selected.push(candidate); used.add(id);
-  }
-
-  if (!selected.length) throw new Error("Aucun exercice Hevy compatible avec le matériel de la salle n’a été trouvé pour cette sélection.");
-
-  selected.sort((a,b) => Number(b.compound)-Number(a.compound) || groups.indexOf(a.group)-groups.indexOf(b.group));
   const lowerBodyProtected = shouldProtectLegs(sessions, clubSchedule);
   const readinessScore = readinessValue(readiness);
   const exercises = selected.slice(0,targetCount).map((candidate,index) =>
-    prescribeExercise(candidate, objective, index, durationMinutes, readinessScore)
+    prescribeExercise(candidate, objective, index, durationMinutes, readinessScore, lowerBodyProtected)
   );
 
   // Un dropset maximum, uniquement quand l'objectif et la récupération le justifient.
@@ -270,55 +257,47 @@ function buildPlan({ objective, durationMinutes, groups, associationId, sessions
   };
 }
 
-function prescribeExercise(candidate, objective, index, durationMinutes, readinessScore) {
+function prescribeExercise(candidate, objective, index, durationMinutes, readinessScore, lowerBodyProtected) {
   const title = candidate.template.title || candidate.history?.title || "Exercice";
   const tier = candidate.compound ? (index < 2 ? "main" : "secondary") : "isolation";
   const scheme = objective[tier];
   const history = candidate.history;
-  const reference = history?.best || null;
-  let workingWeight = estimateWorkingWeight(reference, scheme.intensity, readinessScore);
-  const normalSets = [];
-  for (let i=0;i<scheme.sets;i++) {
-    const rpe = scheme.rpe[Math.min(i,scheme.rpe.length-1)];
-    normalSets.push({ type:"normal", weightKg:workingWeight, reps:scheme.reps, rpe });
-  }
-
+  const load = calculateWorkingLoad(history, scheme, readinessScore, title);
+  const workingWeight = load.weightKg;
+  const protect = lowerBodyProtected && ["quadriceps","hamstrings","glutes"].includes(candidate.group);
+  const workSets = protect ? Math.max(2,scheme.sets-1) : scheme.sets;
+  const normalSets = Array.from({length:workSets},(_,i)=>({
+    type:"normal",weightKg:workingWeight,reps:scheme.reps,
+    rpe:Math.max(6,(scheme.rpe[Math.min(i,scheme.rpe.length-1)]||8)-(protect?0.5:0))
+  }));
   const warmups = [];
   if (candidate.compound && index < 3) {
     if (workingWeight) {
-      warmups.push({ type:"warmup", weightKg:roundLoad(workingWeight*.50), reps:10, rpe:4 });
-      if (objective.id !== "endurance") warmups.push({ type:"warmup", weightKg:roundLoad(workingWeight*.70), reps:6, rpe:5.5 });
-    } else {
-      warmups.push({ type:"warmup", weightKg:null, reps:10, rpe:4 });
-    }
+      warmups.push({type:"warmup",weightKg:roundLoad(workingWeight*.50),reps:10,rpe:4});
+      if (objective.id !== "endurance") warmups.push({type:"warmup",weightKg:roundLoad(workingWeight*.70),reps:6,rpe:5.5});
+    } else warmups.push({type:"warmup",weightKg:null,reps:10,rpe:4});
   }
-
-  const equipment = candidate.template.equipmentMatch;
-  const novelty = history ? (history.daysSince > 45 ? "reintroduced" : "progressed") : "new";
-  const objectiveText = objective.id === "force"
-    ? "Force : aucune série de 4 reps imposée par défaut ; la cible principale est 5 reps sur les mouvements structurants."
-    : objective.id === "hypertrophy"
-      ? "Hypertrophie : séries moyennes, contrôle et tension ; pas de séries très courtes sauf échauffement technique."
-      : "Endurance musculaire : séries longues et récupération courte, sans transformer la séance en travail de force.";
-  const note = [
-    `Matériel : ${equipment}.`,
+  const equipment=candidate.template.equipmentMatch;
+  const novelty=history ? (history.daysSince>45?"reintroduced":"progressed") : "new";
+  const shortHistory=load.previous ?
+    "Dernière référence : "+load.previous.weightKg+" kg × "+load.previous.reps+
+    (load.previous.rpe!=null?" · RPE "+load.previous.rpe:" · RPE inconnu")+"." :
+    "Aucune référence fiable : première série de calibration.";
+  const note=[
+    "Matériel : "+equipment+".",shortHistory,
+    workingWeight!=null ? "Cible "+workingWeight+" kg pour "+scheme.reps+" reps. Ajuste à RPE "+normalSets[0].rpe+"." :
+      "Choisis une charge facile, puis ajuste aux RPE indiqués.",
+    protect?"Charge jambes volontairement réduite pour préserver ta course club.":null,
     techniqueNote(title),
-    objectiveText,
-    history ? `Référence Hevy : ${Math.round(history.daysSince)} j depuis la dernière exposition identifiable.` : "Nouveau mouvement : première séance de calibration, reste volontairement en marge.",
-    novelty === "reintroduced" ? "Réintroduction : conserve une marge supplémentaire sur la première série de travail." : null
+    novelty==="reintroduced"?"Réintroduction : première série prudente.":null
   ].filter(Boolean).join(" ");
-
   return {
-    exerciseTemplateId:String(candidate.template.id),
-    title,
-    primaryGroup:candidate.group,
-    groupLabel:GROUPS[candidate.group],
-    compound:candidate.compound,
-    equipment,
-    novelty,
-    restSeconds:scheme.rest,
-    notes:clip(note,620),
-    sets:[...warmups,...normalSets]
+    exerciseTemplateId:String(candidate.template.id),title,
+    primaryGroup:candidate.group,groupLabel:GROUPS[candidate.group],
+    compound:candidate.compound,equipment,novelty,restSeconds:scheme.rest,
+    loadMethod:load.method,loadConfidence:load.confidence,
+    previousPerformance:load.previous,loadChangePct:load.changePct,loadReason:load.reason,
+    notes:clip(note,620),sets:[...warmups,...normalSets]
   };
 }
 
@@ -371,33 +350,6 @@ async function fetchExerciseTemplates(apiKey) {
   return templates;
 }
 
-function mapHistory(sessions, templates) {
-  const templateMap = new Map(templates.map(t=>[String(t.id),t]));
-  const now = Date.now();
-  const map = new Map();
-  for (const session of [...sessions].sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt))) {
-    for (const ex of Array.isArray(session.exercises)?session.exercises:[]) {
-      const id = ex.exerciseTemplateId ? String(ex.exerciseTemplateId) : null;
-      if (!id) continue;
-      const template = templateMap.get(id) || {};
-      const work = (ex.sets||[]).filter(s=>s.type!=="warmup" && (Number(s.reps)>0 || Number(s.weightKg)>0));
-      if (!work.length) continue;
-      if (!map.has(id)) {
-        map.set(id,{
-          templateId:id,
-          title:ex.title || template.title || "Exercice",
-          group:groupFromTemplate(template) || classifyTitle(ex.title||""),
-          daysSince:Math.max(0,(now-new Date(session.startedAt).getTime())/86400000),
-          exposures:1,
-          best:chooseReferenceSet(work),
-          lastSets:work.slice(0,5)
-        });
-      } else map.get(id).exposures += 1;
-    }
-  }
-  return [...map.values()];
-}
-
 function buildMuscleExposure(sessions) {
   const now=Date.now();
   const out=Object.fromEntries(Object.keys(GROUPS).map(k=>[k,{weightedSets:0,daysSince:99}]));
@@ -433,24 +385,6 @@ function exerciseScore(template,hist,groups) {
   } else score += 4;
   if (isCompound(template.title||"")) score += 8;
   return score;
-}
-
-function estimateWorkingWeight(reference,intensity,readinessScore) {
-  if (!reference) return null;
-  const weight=Number(reference.weightKg||0), reps=Number(reference.reps||0);
-  if (!(weight>0) || !(reps>0)) return null;
-  const e1rm=weight*(1+reps/30);
-  const fatigueFactor=readinessScore<50?.94:readinessScore<65?.97:1;
-  return roundLoad(e1rm*intensity*fatigueFactor);
-}
-
-function chooseReferenceSet(sets) {
-  if (!sets.length) return null;
-  return [...sets].sort((a,b)=>{
-    const ea=Number(a.weightKg||0)*(1+Number(a.reps||0)/30);
-    const eb=Number(b.weightKg||0)*(1+Number(b.reps||0)/30);
-    return eb-ea;
-  })[0];
 }
 
 function equipmentForExercise(title) {
