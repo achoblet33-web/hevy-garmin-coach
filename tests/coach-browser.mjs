@@ -73,6 +73,20 @@ try{
  await page.getByRole("status").filter({hasText:"SIMULATION UNIQUEMENT"}).waitFor({timeout:15000});
  assert.match(await page.locator("#app").innerText(),/SIMULATION UNIQUEMENT/);
  console.log("PASS: Instant 6x800 preview and simulated publish, no live write.");
+ // Active mode must never silently show synthetic fitness data.
+ const active=await browser.newPage({viewport:{width:390,height:844},locale:"fr-FR"});
+ active.on("pageerror",e=>errors.push(String(e)));
+ await active.goto(BASE+"/runna-next/index.html",{waitUntil:"domcontentloaded",timeout:30000});
+ await active.locator('.nav button[data-action="tab:profile"]').waitFor({timeout:12000});
+ assert.match(await active.locator("#app").innerText(),/Mode actif/);
+ assert.doesNotMatch(await active.locator("#app").innerText(),/Mode démonstration/);
+ await active.locator('.nav button[data-action="tab:profile"]').click();
+ await active.locator('button[data-action="connect"]').click();
+ assert.match(await active.locator(".modal").innerText(),/Connecter Intervals.icu/);
+ await active.locator("#apiToken").waitFor();
+ await active.locator("#apiVaultPass").waitFor();
+ console.log("PASS: active mode is clean, requires real API key and offers encrypted vault.");
+ await active.close();
  assert.deepEqual(errors,[],"No uncaught browser errors");
  console.log("PASS: no uncaught browser errors.");
 }finally{await browser.close();}
