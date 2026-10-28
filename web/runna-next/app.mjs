@@ -355,6 +355,28 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
+ if(action==="hevy"){state.sheet="hevy";draw();return;}
+ if(action==="hevyConnect"){
+  if(DEMO)throw Error("Connecte Hevy depuis la version active, pas la démonstration.");
+  const key=$("hevyToken")?.value.trim()||"",pass=$("hevyPass")?.value||"";
+  if(!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(key))throw Error("Clé Hevy Pro invalide : vérifie Developer Settings.");
+  const previous=state.hevyKey;state.hevyKey=key;
+  try{await syncHevy();}catch(error){state.hevyKey=previous;throw error;}
+  if(pass)localStorage.setItem(HEVY_VAULT,await encryptApiKey(key,pass));
+  state.sheet=null;draw();alertText("Hevy Pro connecté : tes séances de musculation sont visibles.");return;
+ }
+ if(action==="hevyUnlock"){
+  const stored=localStorage.getItem(HEVY_VAULT);
+  if(!stored)throw Error("Aucune connexion Hevy sauvegardée.");
+  const key=await decryptApiKey(stored,$("hevyUnlockPass")?.value||"");
+  state.hevyKey=key;
+  try{await syncHevy();}catch(error){state.hevyKey=null;throw error;}
+  state.sheet=null;draw();alertText("Compte Hevy déverrouillé.");return;
+ }
+ if(action==="hevyDisconnect"){
+  state.hevyKey=null;state.hevySessions=[];state.strength=state.intervalsStrength;
+  localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
+ }
  if(action==="weather"){await refreshWeather();return;}
  if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;draw();return;}
  if(action==="day"){state.chosenDay=value;draw();return;}
