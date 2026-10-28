@@ -2,6 +2,7 @@ import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
 import {weekTrend} from "./kintra-insights.mjs";
+import {renderRaceSummary,formatTime} from "./kintra-presenter.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
@@ -88,6 +89,15 @@ function planView(){
  <button class="${p.mode!=="maintenance"?"active":""}" data-action="startMode:event"><span>◎</span><strong>Objectif événement</strong><small>Course programmée</small></button>
  <button class="${p.mode==="maintenance"?"active":""}" data-action="startMode:maintenance"><span>↗</span><strong>Mode maintien</strong><small>Entretenir ta forme</small></button></div>
  ${program()}
+ <article class="card kintra-coach-parameters" data-testid="coach-parameters">
+ <div class="between"><h3 class="heading">Paramètres de mon plan</h3><button class="textButton" data-action="setup">Modifier ›</button></div>
+ <div class="kintra-coach-parameter-grid">
+ <div><small>${p.mode==="maintenance"?"Orientation":"Distance objectif"}</small><strong>${p.mode==="maintenance"?e({balance:"Équilibre",endurance:"Endurance",speed:"Vitesse contrôlée"}[p.profile.maintenanceFocus]||"Maintien"):km(p.profile.distanceKm)+" km"}</strong></div>
+ <div><small>${p.mode==="maintenance"?"Cycle":"Chrono visé"}</small><strong>${p.mode==="maintenance"?"4 semaines":p.profile.targetTimeMinutes?timeGoal(p.profile.targetTimeMinutes):"Libre"}</strong></div>
+ <div><small>${p.mode==="maintenance"?"Objectif":"Date de l'événement"}</small><strong>${p.mode==="maintenance"?"Entretenir la forme":p.profile.raceDate?fmt(p.profile.raceDate):"Non définie"}</strong></div>
+ <div><small>Volume de départ</small><strong>${km(p.profile.weeklyKm)} km/sem.</strong></div>
+ <div><small>Fréquence</small><strong>${p.profile.frequency} jours/sem.</strong></div>
+ <div><small>Jours disponibles</small><strong>${(p.profile.availableDays||[]).map(d=>["L","Ma","Me","J","V","S","D"][d]).join(" · ")||"Non définis"}</strong></div></div></article>
  <article class="kintra-coach-tip"><div class="between"><div><div class="eyebrow">COACH ADAPTATIF</div><strong>${state.adaptiveSuggestions?"Conseils contextuels activés":"Conseils contextuels désactivés"}</strong></div>
  <button class="kintra-toggle ${state.adaptiveSuggestions?"on":""}" data-action="toggleAdvice" role="switch" aria-checked="${state.adaptiveSuggestions}" aria-label="Activer les conseils adaptatifs"><span></span></button></div>
  <p class="sub">Analyse les informations disponibles et suggère de conserver, alléger ou reporter une séance. Le plan ne change jamais sans ton accord.</p></article>
@@ -126,6 +136,7 @@ function activitiesView(){
  <p class="sub">Semaine précédente : ${week.previousKm} km. ${week.changePct==null?"Pas assez de kilomètres précédents pour un pourcentage représentatif.":"Variation observée, pas nécessairement une amélioration de performance."}</p></div>`;
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
  return `<h2 class="pageTitle">Progression</h2>${tabs}<p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
+ ${renderRaceSummary(state.activities,state.feedback)}
  ${weeklyComparison}
  ${renderKintraProgressSummary({state,date:today()})}
  ${renderKintraStrengthSummary({state,date:today()})}
@@ -135,7 +146,7 @@ function activitiesView(){
  <div class="line"></div><strong>Volume par séance</strong><div class="metrics" style="margin-top:12px">
  ${runlist.slice(0,8).reverse().map(x=>`<div class="bar"><span>${fmt(String(x.startedAt).slice(0,10)).split(" ")[0]}</span><div class="track"><b style="width:${Math.round((Number(x.distanceKm||0)/long)*100)}%"></b></div><small>${km(x.distanceKm)} km</small></div>`).join("")||`<p class="sub">Synchronise tes courses pour voir la progression.</p>`}</div></div>
  <div class="sectionTitle"><h2>Historique</h2><button class="textButton" data-action="connect">Connecter mes données</button></div>
- ${runlist.map(x=>`<div class="training"><span class="strip"></span><span style="flex:1"><small>${fmt(String(x.startedAt).slice(0,10))}</small><strong>${e(x.title)}</strong><small>${km(x.distanceKm)} km · ${x.durationMinutes??"—"} min · FC ${x.averageHeartRate??"—"}</small></span></div>`).join("")||`<div class="card empty"><strong>Ton historique t'attend</strong>Les activités de ton Apple Watch peuvent remonter via Intervals.icu Companion.</div>`}
+ ${runlist.map(x=>`<button class="training" data-action="activity:${e(String(x.externalId||x.id||"").replace(/^intervals:/,""))}"><span class="strip"></span><span style="flex:1;min-width:0"><small>${fmt(String(x.startedAt).slice(0,10))}</small><strong>${e(x.title)}</strong><small>${km(x.distanceKm)} km · ${x.durationMinutes??"—"} min · FC ${x.averageHeartRate??"—"}</small></span><span class="arrow">›</span></button>`).join("")||`<div class="card empty"><strong>Ton historique t'attend</strong>Les activités de ton Apple Watch peuvent remonter via Intervals.icu Companion.</div>`}
  ${renderTrainingReview(state.activities,state.planned||[])}
  <div class="card"><div class="heading">Analyses avancées</div><p class="sub">Les comparaisons répétition par répétition et les estimations chronométriques nécessitent les tours, les zones et des courses réelles. Aucun score de performance fictif n'est affiché.</p></div>`;
 }
@@ -178,7 +189,7 @@ function detailView(x){
  const metrics=evaluateSportContext({activities:state.activities,wellness:state.wellness,strength:state.strength,date:today()});
  const caution=metrics.warnings.filter(w=>!/insuffisant/i.test(w));
  return `<div class="detailsHeader kintra-session-header"><div class="between"><span class="eyebrow">${fmt(x.date)} · ${e(x.phase||"Séance")}</span><span class="pill muted">${x.status==="done"?"Terminée":x.status==="skipped"?"Ignorée":"Prévue"}</span></div>
- <h2>${e(x.title)}</h2><p class="sub">${km(x.distanceKm)} km · ${e(x.intensity||"Allure confortable")}</p><div class="badgeLine"><span class="pill">${e(labels[x.kind]||"Course")}</span><span class="pill muted">${state.plan?.mode==="maintenance"?"Mode maintien":(state.plan?.profile?.distanceKm||"—")+" km objectif"}</span></div></div>
+ <h2>${e(x.title)}</h2><div class="kintra-session-metadata"><span>↗ ${km(x.distanceKm)} km</span><span>◷ ${x.durationMinutes?formatTime(x.durationMinutes):"Durée à confirmer"}</span><span>▮ ${e(x.intensity||"Intensité selon les sensations")}</span></div><div class="badgeLine"><span class="pill">${e(labels[x.kind]||"Course")}</span><span class="pill muted">${state.plan?.mode==="maintenance"?"Mode maintien":(state.plan?.profile?.distanceKm||"—")+" km objectif"}</span></div></div>
  <div class="kintra-session-context"><strong>${state.adaptiveSuggestions?"◉ Conseil adapté à tes données":"◉ Conseils adaptatifs désactivés"}</strong>
  <p class="sub">${state.adaptiveSuggestions?(caution.length?e(caution[0])+" Vérifie ton ressenti avant une intensité élevée.":"Aucun signal d'alerte exploitable. Adapte l'allure à ton ressenti : le plan n'est pas modifié automatiquement."):"Active les conseils depuis Coach pour consulter des recommandations contextuelles."}</p></div>
  <div class="card"><h3 class="heading">Détail de la séance</h3>
