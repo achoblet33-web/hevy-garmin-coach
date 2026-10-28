@@ -44,3 +44,14 @@ test("different-source near-identical workouts only flagged; they are never sile
 test("separate activities more than two minutes apart are not flagged",()=>{
  assert.equal(findPotentialDuplicates([run("a"),run("b",{startedAt:"2026-10-28T11:30:00Z"})]).length,0);
 });
+
+test("manual mapping confirms only the chosen valid run, never another planned session",()=>{
+ const workouts=[{id:"local1",date:"2026-10-28"},{id:"local2",date:"2026-10-28"}];
+ const rows=[run("a")];
+ const result=reconcileWorkouts(rows,workouts,{local1:"a"});
+ assert.equal(result[0].matchStatus,"confirmed");
+ assert.equal(result[0].source,"user_confirmed");
+ assert.equal(result[1].matchStatus,"unmatched");
+ const stale=reconcileWorkouts([],workouts,{local1:"a"});
+ assert.equal(stale[0].matchStatus,"unmatched");
+});
