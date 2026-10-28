@@ -4,6 +4,7 @@
  * embedded in HTML, repo, analytics, or env. No external CORS.
  */
 import {buildRunningWorkout} from "../Backend/running-workouts.mjs";
+import {normalizeStreams,normalizeDetail} from "./kintra-activity.mjs";
 const BASE="https://intervals.icu/api/v1/athlete/0";
 const MAX_DAYS=180;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store, private","X-Robots-Tag":"noindex","X-Content-Type-Options":"nosniff"}});
@@ -95,6 +96,22 @@ async function activityIntervals(request,key){
  return json({ok:true,id,segments:normalized,source:"Intervals.icu",intervalsAvailable:rows.length>0,
    note:rows.length?"Segments retournés par Intervals.icu, pas nécessairement les répétitions planifiées.":"Aucun segment analysable fourni par Intervals.icu pour cette activité."});
 }
+async function activityDetail(request,key){
+ const u=new URL(request.url),id=String(u.pathname.split("/").at(-2)||"");
+ if(!/^[A-Za-z0-9_-]{1,80}$/.test(id))return json({error:"Identifiant GPS invalide."},400);
+ const root="/activity/"+encodeURIComponent(id);
+ const results=await Promise.allSettled([
+   fetchIntervals(key,root),
+   fetchIntervals(key,root+"/streams.json?types=latlng,altitude,velocity_smooth,cadence,heartrate,watts")
+ ]);
+ if(results.every(x=>x.status==="rejected"))return json({
+   ok:false,error:"Les détails ne sont pas accessibles dans Intervals.icu pour cette activité."},404);
+ const detail=results[0].status==="fulfilled"?normalizeDetail(results[0].value):{};
+ const route=results[1].status==="fulfilled"?normalizeStreams(results[1].value):normalizeStreams([]);
+ return json({ok:true,id,detail,route,source:"Intervals.icu",
+  note:route.hasGps?"Tracé issu des positions GPS enregistrées dans Intervals.icu.":
+    "Aucun parcours GPS exploitable transmis pour cette activité (source, autorisations ou montre sans trace)."});
+}
 async function publish(request,key){
  const data=await request.json();
  const workout=buildRunningWorkout(data,day());
@@ -138,6 +155,8 @@ export default {
    if(u.pathname==="/v3/dashboard"&&request.method==="GET")return dashboard(request,key);
    if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/intervals$/.test(u.pathname)&&request.method==="GET")
      return activityIntervals(request,key);
+   if(/^\\/v3\\/activities\\/[A-Za-z0-9_-]{1,80}\\/detail$/.test(u.pathname)&&request.method==="GET")
+     return activityDetail(request,key);
    if(u.pathname==="/v3/workouts/publish"&&request.method==="POST")return publish(request,key);
    return json({error:"Route ou méthode inconnue."},404);
   }catch(error){
