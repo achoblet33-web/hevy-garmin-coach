@@ -22,6 +22,7 @@
       { label:"Pas de séance jambes récente identifiée", detail:"Vérifie la synchronisation Hevy avant une séance intense." };
   }
   const css = `
+    .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}.bottom-nav button{font-size:.61rem}.ts3-fields [hidden]{display:none!important}
     #performanceView{padding-bottom:18px}.ts3-stack{display:grid;gap:14px}.ts3-hero{border-radius:22px;padding:21px;background:linear-gradient(125deg,#184b3b,#102823);color:#ecfff3;border:1px solid #326b52}.ts3-hero h2{font-size:28px;margin:5px 0 9px}.ts3-hero p{font-size:13px;line-height:1.5;color:#c5ebd2;margin:0}.ts3-kicker{font-size:10px;letter-spacing:.13em;font-weight:850;text-transform:uppercase;color:#93deb5}.ts3-panel{padding:17px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);border-radius:20px}.ts3-panel h3{font-size:17px;margin:0 0 10px}.ts3-muted{font-size:12px;line-height:1.55;color:var(--muted,#abb1ae)}.ts3-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ts3-stat{padding:11px;background:rgba(255,255,255,.05);border-radius:13px;min-width:0}.ts3-stat strong{display:block;font-size:18px}.ts3-stat small{font-size:10px;color:var(--muted,#abb1ae)}.ts3-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.ts3-fields label{display:grid;gap:5px;min-width:0;font-size:11px}.ts3-fields input,.ts3-fields select{min-width:0;width:100%;box-sizing:border-box;background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:11px;color:inherit}.ts3-wide{grid-column:span 2}.ts3-buttonrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.ts3-buttonrow button{flex:1 1 140px;min-height:44px}.ts3-chip{display:inline-block;background:rgba(113,224,159,.13);color:#8eeab0;border:1px solid rgba(113,224,159,.25);font-size:10px;padding:5px 9px;border-radius:999px}.ts3-entry{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)}.ts3-entry:last-child{border-bottom:none}.ts3-entry strong{display:block;font-size:13px}.ts3-entry small{font-size:11px;color:var(--muted,#abb1ae)}.ts3-code{background:rgba(0,0,0,.2);border-radius:12px;white-space:pre-wrap;word-break:break-word;font-size:12px;padding:12px;line-height:1.5}.ts3-banner{font-size:12px;line-height:1.5;padding:11px;border-radius:12px;background:rgba(245,179,67,.1);color:#f5d394}.ts3-action{background:#3cba83;color:#09251a;border:0;border-radius:12px;padding:12px;font-weight:800}.ts3-secondary{background:rgba(255,255,255,.07);color:inherit;border:1px solid rgba(255,255,255,.17);border-radius:12px;padding:12px;font-weight:650}.ts3-action:disabled,.ts3-secondary:disabled{opacity:.45}#performanceView a{color:#88e3b0}
   `;
   function markup() {
@@ -38,6 +39,7 @@
         <div class="ts3-panel"><h3>Vue d'ensemble</h3><div class="ts3-grid" id="ts3Stats">
           <div class="ts3-stat"><strong>—</strong><small>Km sur 7 j</small></div><div class="ts3-stat"><strong>—</strong><small>Km sur 28 j</small></div><div class="ts3-stat"><strong>—</strong><small>Courses sur 28 j</small></div></div>
           <p class="ts3-muted" id="ts3LoadNote">En attente de données sportives réelles.</p></div>
+        <div class="ts3-panel"><h3>Récupération (Intervals.icu)</h3><div class="ts3-grid" id="ts3Wellness"><div class="ts3-stat"><strong>—</strong><small>HRV</small></div><div class="ts3-stat"><strong>—</strong><small>FC repos</small></div><div class="ts3-stat"><strong>—</strong><small>Sommeil</small></div></div><p class="ts3-muted" id="ts3WellnessNote">Métriques brutes, pas de score Bevel.</p></div>
         <div class="ts3-panel"><h3>Musculation et disponibilité</h3><div class="ts3-banner" id="ts3Legs">Connecte Hevy pour évaluer les dernières sollicitations des jambes.</div>
           <p class="ts3-muted">Indicateur contextuel, non médical. Le ressenti et la douleur priment sur les scores.</p></div>
         <div class="ts3-panel"><h3>Mon objectif running</h3><div class="ts3-fields">
@@ -48,7 +50,7 @@
           <div class="ts3-buttonrow"><button type="button" class="ts3-secondary" id="ts3SaveGoal">Enregistrer l'objectif</button></div>
           <p class="ts3-muted" id="ts3GoalNote">Cette étape enregistre tes contraintes. Un programme complet sera activé après calibration de tes zones de course.</p></div>
         <div class="ts3-panel"><h3>Construire une séance pour l'Apple Watch</h3>
-          <p class="ts3-muted">Envoi via l'API Intervals.icu. La synchronisation vers Exercice est assurée séparément par Companion.</p>
+          <p class="ts3-muted">Envoi via l'API Intervals.icu. La synchronisation vers Exercice est assurée séparément par Companion, sur iPhone ouvert et déverrouillé selon le fonctionnement actuel.</p>
           <form id="ts3WorkoutForm" class="ts3-fields">
             <label>Type de séance<select id="ts3WorkoutKind" name="kind"><option value="easy">Footing facile</option><option value="long">Sortie longue</option><option value="interval">Fractionné</option><option value="tempo">Tempo</option></select></label>
             <label>Jour prévu<input id="ts3WorkoutDate" name="date" type="date" required></label>
@@ -70,6 +72,10 @@
     const last7=sum(7),last28=sum(28),total=items=>items.reduce((v,a)=>v+(Number(a.distanceKm)||0),0);
     byId("ts3Stats").innerHTML=`<div class="ts3-stat"><strong>${nf(total(last7))}</strong><small>Km sur 7 j</small></div><div class="ts3-stat"><strong>${nf(total(last28))}</strong><small>Km sur 28 j</small></div><div class="ts3-stat"><strong>${last28.length}</strong><small>Courses sur 28 j</small></div>`;
     byId("ts3LoadNote").textContent=`${dashboard.activities.length} activités Intervals.icu · ${dashboard.strength.length} séances Hevy sur ${dashboard.period.days} jours · actualisé le ${new Date(dashboard.syncedAt).toLocaleString("fr-FR")}`;
+    const lastWellness=(dashboard.wellness || []).filter(x=>x.hrv!=null||x.restingHR!=null||x.sleepSecs!=null).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+    const sleep=lastWellness?.sleepSecs==null?"—":nf(lastWellness.sleepSecs/3600,1)+" h";
+    byId("ts3Wellness").innerHTML=`<div class="ts3-stat"><strong>${nf(lastWellness?.hrv,0)}</strong><small>HRV · ms</small></div><div class="ts3-stat"><strong>${nf(lastWellness?.restingHR,0)}</strong><small>FC repos · bpm</small></div><div class="ts3-stat"><strong>${sleep}</strong><small>Sommeil</small></div>`;
+    byId("ts3WellnessNote").textContent=lastWellness?"Dernier relevé : "+String(lastWellness.date||"—")+". Mesures fournies par Intervals.icu, sous réserve de leurs permissions.":"Aucune mesure disponible. Vérifie la synchronisation Apple Santé → Companion → Intervals.icu.";
     const fatigue=legFatigue(dashboard.strength); byId("ts3Legs").innerHTML=`<strong>${esc(fatigue.label)}</strong><div>${fatigue.detail}</div>`;
     const source=dashboard.sources;
     const ok=source.intervals?.ok && source.calendar?.ok;
