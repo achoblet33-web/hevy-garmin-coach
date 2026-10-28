@@ -34,15 +34,21 @@ function workoutDescription(x){
  return[{name:"Départ",value:"10 min très faciles"},{name:"Endurance",value:"Effort confortable, respiration régulière"},{name:"Fin",value:"Retour au calme"}];
 }
 function program(){
- if(!state.plan)return "";
- const p=state.plan.profile;
- const daysLeft=Math.max(0,Math.round((new Date(p.raceDate+"T12:00:00Z")-new Date(today()+"T12:00:00Z"))/86400000));
- const nowWeek=state.plan.sessions.find(s=>s.date>=today())?.week||state.plan.totalWeeks;
- const done=state.plan.sessions.filter(s=>s.status==="done").length;
- return `<div class="card hero"><div class="between"><span class="eyebrow">Ton programme de course</span><span class="pill">${daysLeft} jours restants</span></div>
- <h2>Objectif ${km(p.distanceKm)} km</h2><p class="sub">${full(p.raceDate)} · ${timeGoal(p.targetTimeMinutes)}</p>
+ if(!state.plan)return `<div class="kintra-plan-empty"><strong>Ton programme n'est pas encore configuré.</strong>
+ <p class="sub">Choisis un objectif événement ou un cycle de maintien adapté à ton emploi du temps.</p>
+ <button class="btn" data-action="setup">Créer mon programme</button></div>`;
+ const p=state.plan.profile,isMaint=state.plan.mode==="maintenance"||p.mode==="maintenance";
+ const daysLeft=isMaint?null:Math.max(0,Math.round((new Date(p.raceDate+"T12:00:00Z")-new Date(today()+"T12:00:00Z"))/86400000));
+ const nowWeek=state.plan.sessions.find(x=>x.date>=today())?.week||state.plan.totalWeeks;
+ const done=state.plan.sessions.filter(x=>x.status==="done").length;
+ return `<div class="card hero kintra-plan-hero"><div class="between">
+ <span class="eyebrow">${isMaint?"COACH · MODE MAINTIEN":"COACH · OBJECTIF ÉVÉNEMENT"}</span>
+ <span class="pill">${isMaint?"Cycle de 4 semaines":daysLeft+" jours"}</span></div>
+ <h2>${isMaint?"Reste en mouvement":"Objectif "+km(p.distanceKm)+" km"}</h2>
+ <p class="sub">${isMaint?e(p.frequency+" séances / semaine · "+p.weeklyKm+" km de base"):full(p.raceDate)+" · "+timeGoal(p.targetTimeMinutes)}</p>
  <div class="progress"><span style="width:${Math.round(done/Math.max(1,state.plan.sessions.length)*100)}%"></span></div>
- <div class="between"><span class="sub">Semaine ${nowWeek} / ${state.plan.totalWeeks}</span><button class="textButton" data-action="tab:plan">Voir mon plan ›</button></div></div>`;
+ <div class="between"><span class="sub">Semaine ${nowWeek} / ${state.plan.totalWeeks}</span>
+ <button class="textButton" data-action="tab:plan">Voir mon programme ›</button></div></div>`;
 }
 function weekBar(date){
  const start=monday(date),arr=Array.from({length:7},(_,i)=>add(start,i));
