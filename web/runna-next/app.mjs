@@ -21,7 +21,7 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -297,7 +297,7 @@ function sheet(){
  <div class="actions"><button class="btn ghost full" data-action="hevyDisconnect">Déconnecter Hevy</button></div>`;
  if(sh==="weatherLocation")body=`<h2>Choisir ma météo</h2>
  <p class="sub">Recherche une ville, ou autorise ponctuellement le GPS. Le lieu choisi reste sur cet appareil. Les coordonnées transmises au service météo sont arrondies.</p>
- <label>Ville ou commune<input id="weatherCity" placeholder="Ex. Le Lamentin, Fort-de-France, Lyon..." maxlength="80" autocomplete="off"></label>
+ <label>Ville ou commune<input id="weatherCity" placeholder="Ex. Le Lamentin, Fort-de-France, Lyon..." maxlength="80" autocomplete="off" value="${e(state.weatherQuery||"")}"></label>
  <div class="actions"><button class="btn full" data-action="weatherSearch">Rechercher la ville</button></div>
  ${state.weatherResults.length?`<div class="kintra-place-results">${state.weatherResults.map((p,i)=>`<button class="training" data-action="weatherChoose:${i}"><strong>${e(p.label)}</strong><span class="arrow">›</span></button>`).join("")}</div>`:
  `<p class="sub">Aucun lieu choisi dans cette recherche.</p>`}
@@ -362,7 +362,7 @@ async function searchWeatherPlace(){
  const res=await fetch("/v3/places?name="+encodeURIComponent(name),{cache:"no-store",signal:AbortSignal.timeout(14000)});
  const data=await res.json().catch(()=>({}));
  if(!res.ok||!data.ok)throw Error(data.error||"Recherche indisponible.");
- state.weatherResults=Array.isArray(data.results)?data.results:[];
+ state.weatherResults=Array.isArray(data.results)?data.results:[];state.weatherQuery=name;
  draw();
 }
 async function selectWeatherGPS(){
@@ -440,7 +440,7 @@ async function perform(action,value){
   state.hevyKey=null;state.hevySessions=[];state.strength=state.intervalsStrength;
   localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
  }
- if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];draw();return;}
+ if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];state.weatherQuery="";draw();return;}
  if(action==="weatherSearch"){await searchWeatherPlace();return;}
  if(action==="weatherChoose"){
   const n=Number(value);if(!Number.isInteger(n)||n<0||n>=state.weatherResults.length)throw Error("Lieu introuvable.");
