@@ -1,8 +1,10 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
+import {generateMaintenancePlan} from "./kintra-coach.mjs";
+import {renderKintraDashboard,renderKintraProgressSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
-const sample=()=>({distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
+const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 function add(x,n){const d=new Date(x+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
@@ -17,7 +19,7 @@ const emoji={easy:"🏃",long:"↗",interval:"⚡",tempo:"◈",race:"🏁",rest:
 const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
-let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -56,25 +58,9 @@ function sessionCard(x){
  <span style="flex:1;min-width:0"><small>${fmt(date)} · ${x.status==="done"?"Terminé":x.kind==="rest"?"Récupération":x.status==="skipped"?"Ignoré":"À venir"}</small>
  <strong>${e(x.title||labels[x.kind]||"Course")}</strong><small>${km(x.distanceKm)} km · ${e(x.intensity||"Effort personnalisé")}</small></span><span class="arrow">›</span></button>`;
 }
-function todayView(){
- if(!state.plan)return emptyWelcome();
- const daySessions=state.plan.sessions.filter(x=>x.date===state.chosenDay);
- const next=state.plan.sessions.filter(x=>x.date>state.chosenDay&&x.kind!=="rest").slice(0,2);
- const current=state.plan.sessions.find(x=>x.date===today());
- const insight=applyTodayRecommendation(state.plan,{today:today(),strength:state.strength});
- const lastHevy=state.strength.filter(x=>x.startedAt).sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt)))[0];
- return `${program()}
- <div class="card"><div class="between"><strong>Cette semaine</strong><button class="textButton" data-action="tab:plan">Tout voir</button></div>${weekBar(state.chosenDay)}</div>
- <div class="sectionTitle"><h2>${state.chosenDay===today()?"Aujourd'hui":full(state.chosenDay)}</h2><button class="textButton" data-action="instant">+ Séance libre</button></div>
- ${daySessions.length?daySessions.map(sessionCard).join(""):`<div class="card empty"><strong>Pas de course prévue</strong>Profite de cette journée ou crée une séance libre.</div>`}
- <div class="card"><div class="eyebrow">Conseil du coach</div><h3 class="heading" style="margin-top:8px">${e(insight.title)}</h3><p class="sub">${e(insight.reason)}</p>
- ${insight.changed?`<div class="warning">Séance intense déconseillée aujourd'hui : proposition d'adaptation à confirmer.</div>`:""}
- ${lastHevy?`<div class="callout">Musculation récemment enregistrée · ${e(lastHevy.title||"Hevy")}<br><small>Recommandations indicatives, non médicales.</small></div>`:""}
- <div class="actions"><button class="btn secondary" data-action="adjust">Adapter mon programme</button></div></div>
- ${next.length?`<div class="sectionTitle"><h2>À venir</h2></div>${next.map(sessionCard).join("")}`:""}`;
-}
+function todayView(){return renderKintraDashboard({state,plan:state.plan,date:today(),weekstrip:weekBar,sessionCard,program});}
 function emptyWelcome(){
- return `<div class="card hero"><span class="eyebrow">Bienvenue sur TrainSync</span><h2>Un objectif.<br>Un programme.<br>Ton rythme.</h2><p class="sub">Un coach de course personnalisé, jour après jour, conçu pour fonctionner avec les séances enregistrées sur ta montre.</p>
+ return `<div class="card hero"><span class="eyebrow">Bienvenue sur KINTRA</span><h2>Un objectif.<br>Un programme.<br>Ton rythme.</h2><p class="sub">Un coach de course personnalisé, jour après jour, conçu pour fonctionner avec les séances enregistrées sur ta montre.</p>
  <div class="actions"><button class="btn full" data-action="setup">Créer mon programme</button></div></div>
  <div class="card"><div class="heading">Comment ça marche</div>
  ${[["◎","Définis ton objectif","Distance, échéance et niveau actuel."],["▦","Retrouve ta semaine","Footings, fractionnés, sorties longues et repos."],["↗","Progresse après chaque course","Suivi et ajustements selon tes performances."]].map(x=>`<div class="row" style="margin:15px 0"><div class="iconTile">${x[0]}</div><div><strong>${x[1]}</strong><p class="sub">${x[2]}</p></div></div>`).join("")}</div>`;
@@ -100,6 +86,7 @@ function activitiesView(){
  const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
  return `<h2 class="pageTitle">Progression</h2><p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
+ ${renderKintraProgressSummary({state,date:today()})}
  <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
  <div class="card"><div class="between"><h3 class="heading">Les 28 derniers jours</h3><span class="pill muted">${state.sourceMode==="demo"?"Données fictives":"Intervals.icu"}</span></div>
  <div class="statrow"><div class="stat"><strong>${km(stats.km)}</strong><small>Kilomètres</small></div><div class="stat"><strong>${stats.sessions}</strong><small>Courses</small></div><div class="stat"><strong>${km(stats.sessions?stats.km/stats.sessions:0)}</strong><small>Moyenne km</small></div></div>
@@ -119,7 +106,7 @@ function libraryView(){
 function profileView(){
  const p=state.plan?.profile;
  return `<h2 class="pageTitle">Mon profil</h2><p class="sub">Tes objectifs, tes appareils et les paramètres du coach.</p>
- <div class="card"><div class="row"><div class="iconTile">◎</div><div><strong>TrainSync Coach</strong><p class="sub">${p?km(p.distanceKm)+" km · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
+ <div class="card"><div class="row"><div class="iconTile">◎</div><div><strong>KINTRA Coach</strong><p class="sub">${p?(p.mode==="maintenance"?"Mode maintien":km(p.distanceKm)+" km")+" · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="setup">${p?"Créer un autre programme":"Définir mon objectif"}</button></div></div>
  <div class="card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
  <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
@@ -261,7 +248,7 @@ function sheet(){
 function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?`<div role="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:100;background:#335246;color:#fff;border-radius:14px;padding:14px;max-width:95%;width:max-content">${e(state.toast)}</div>`:"");}
 function wizardValues(){
  const f=state.form;
- if(state.step===0){f.raceDate=$("raceDate").value;const t=$("raceTime").value.trim();
+ if(state.step===0&&f.mode!=="maintenance"){f.raceDate=$("raceDate").value;const t=$("raceTime").value.trim();
   if(t){if(!/^\d{1,2}:\d{2}:\d{2}$/.test(t))throw Error("Chrono au format H:MM:SS.");
    const [h,m,s]=t.split(":").map(Number);if(m>59||s>59)throw Error("Chrono invalide.");f.targetTimeMinutes=h*60+m+s/60;}
   else f.targetTimeMinutes=null;
@@ -334,12 +321,14 @@ async function perform(action,value){
    persist();state.sheet=null;draw();alertText("Ressenti enregistré. Le plan reste inchangé.");return;
  }
  if(action==="back"){state.selected=null;draw();return;}
- if(action==="setup"){state.form={...state.plan?.profile,...(state.plan?{}:sample())};state.step=0;state.wizard=true;state.sheet=null;draw();return;}
+ if(action==="setup"){state.form={...sample(),...(state.plan?.profile||{}),mode:state.plan?.mode||state.plan?.profile?.mode||"event"};state.step=0;state.wizard=true;state.sheet=null;draw();return;}
  if(action==="distance"){state.form.distanceKm=Number(value);draw();return;}
+ if(action==="goalMode"){state.form.mode=value==="maintenance"?"maintenance":"event";draw();return;}
+ if(action==="focus"){state.form.maintenanceFocus=["balance","endurance","speed"].includes(value)?value:"balance";draw();return;}
  if(action==="wizardBack"){if(state.step===0){state.wizard=false;}else state.step--;draw();return;}
  if(action==="wizardNext"){
   wizardValues();if(state.step<3){state.step++;draw();return;}
-  state.draft=generateRunningPlan(state.form,today());state.wizard=false;state.sheet="preview";draw();return;
+  state.draft=state.form.mode==="maintenance"?generateMaintenancePlan(state.form,today()):generateRunningPlan(state.form,today());state.wizard=false;state.sheet="preview";draw();return;
  }
  if(action==="acceptPlan"){
   if(!state.draft)return;if(!confirm("Adopter ce programme ? Aucune séance ne sera publiée automatiquement."))return;
