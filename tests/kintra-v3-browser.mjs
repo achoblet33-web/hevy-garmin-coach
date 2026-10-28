@@ -83,8 +83,10 @@ try{
  await page.locator('button[data-action="backupSecure"]').click();
  await page.locator("#kintraSecurePass").fill("phrase-longue-kintra-test-2026");
  await page.locator("#kintraSecurePassAgain").fill("phrase-longue-kintra-test-2026");
- const encryptedDownloadPromise=page.waitForEvent("download");
  await page.locator('button[data-action="backupSecureDownload"]').click();
+ await page.getByText("Fichier chiffré préparé").waitFor({timeout:25000});
+ const encryptedDownloadPromise=page.waitForEvent("download");
+ await page.locator('button[data-action="backupSecureSave"]').click();
  const encryptedDownload=await encryptedDownloadPromise;
  assert.match(encryptedDownload.suggestedFilename(),/sauvegarde-chiffree.*json/);
  const encryptedJson=await readFile(await encryptedDownload.path(),"utf8");
