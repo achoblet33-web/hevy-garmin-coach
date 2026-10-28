@@ -32,7 +32,15 @@ let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,for
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;state.pairedRuns=saved.pairedRuns&&typeof saved.pairedRuns==="object"?saved.pairedRuns:{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{throw Error("Impossible de sauvegarder sur cet appareil (stockage saturé ou indisponible). Exporte une sauvegarde chiffrée puis libère de l’espace.");}}
 function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today(),pairedRuns:state.pairedRuns});}
-function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
+function toastHtml(text){return `<div id="kintra-toast" role="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:100;background:#335246;color:#fff;border-radius:14px;padding:14px;max-width:95%;width:max-content">${e(text)}</div>`}
+function alertText(text){
+ state.toast=text;
+ const node=document.getElementById("kintra-toast");
+ if(node)node.textContent=text;
+ else $("app")?.insertAdjacentHTML("beforeend",toastHtml(text));
+ // Do not redraw the app on toast dismissal: redrawing clears form input focus and values.
+ setTimeout(()=>{if(state.toast===text){state.toast="";document.getElementById("kintra-toast")?.remove()}},5000);
+}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
  return {runs,km:runs.reduce((a,x)=>a+Number(x.distanceKm||0),0),sessions:runs.length};}
@@ -395,7 +403,7 @@ function sheet(){
  <div class="choice">${["easy","interval","tempo","long"].map(k=>`<button data-action="instantType:${k}"><span>${emoji[k]}</span>${labels[k]}</button>`).join("")}</div>`;
  return `<div class="modalShade"><section class="modal" role="dialog" aria-modal="true" aria-label="${e(sh)}">${close}${body}</section></div>`;
 }
-function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?`<div role="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:100;background:#335246;color:#fff;border-radius:14px;padding:14px;max-width:95%;width:max-content">${e(state.toast)}</div>`:"");}
+function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?toastHtml(state.toast):"");}
 function wizardValues(){
  const f=state.form;
  if(state.step===0&&f.mode!=="maintenance"){f.raceDate=$("raceDate").value;const t=$("raceTime").value.trim();
