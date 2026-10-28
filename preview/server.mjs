@@ -15,9 +15,9 @@ const port=Number(process.env.PORT || 8080);
 const app=createServer(async(req,res)=>{
   const u=new URL(req.url || "/", "http://localhost");
   res.setHeader("X-Robots-Tag","noindex, nofollow");
-  res.setHeader("Referrer-Policy","no-referrer");
+  res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy","geolocation=(self), microphone=(), camera=()");
-  res.setHeader("Content-Security-Policy","default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'");
+  res.setHeader("Content-Security-Policy","default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'");
   res.setHeader("X-Content-Type-Options","nosniff");
   res.setHeader("Cache-Control","no-store");
   if(u.pathname==="/health"){res.writeHead(200,{"Content-Type":"application/json"});return res.end(JSON.stringify({ok:true,mode:"active-capable",keyStoredOnServer:false}));}
