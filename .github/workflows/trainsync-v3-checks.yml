@@ -43,6 +43,7 @@ jobs:
           node --check Backend/running-workouts.mjs
           node --check preview/worker.js
           node --check preview/live-worker.mjs
+          node --check preview/hevy-relay.mjs
           node --check web/runna-next/credentials.mjs
           node --check preview/server.mjs
       - name: Unit and API tests (no network keys)
