@@ -99,7 +99,7 @@ function planView(){
  const p=state.plan,idx=Math.max(0,Math.min(state.week,p.totalWeeks-1)),w=p.summary[idx];
  const sessions=p.sessions.filter(x=>x.week===w.week);
  const done=sessions.filter(x=>x.status==="done").length;
- return `<h2 class="pageTitle">Ton coach KINTRA</h2>
+ return `<h2 class="pageTitle">Ton coach</h2><p class="sub">Un plan adapté à ton niveau, à tes objectifs et à ton rythme de vie.</p>
  <div class="kintra-mode-picker kintra-coach-switch">
  <button class="${p.mode!=="maintenance"?"active":""}" data-action="startMode:event"><span>◎</span><strong>Objectif événement</strong><small>Course programmée</small></button>
  <button class="${p.mode==="maintenance"?"active":""}" data-action="startMode:maintenance"><span>↗</span><strong>Mode maintien</strong><small>Entretenir ta forme</small></button></div>
@@ -180,9 +180,9 @@ function libraryView(){
 function profileView(){
  const p=state.plan?.profile;
  return `<h2 class="pageTitle">Mon profil</h2><p class="sub">Tes objectifs, tes appareils et les paramètres du coach.</p>
- <div class="card"><div class="row"><div class="iconTile">◎</div><div><strong>KINTRA Coach</strong><p class="sub">${p?(p.mode==="maintenance"?"Mode maintien":km(p.distanceKm)+" km")+" · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
+ <div class="card kintra-profile-hero"><div class="row"><div class="iconTile">◎</div><div><strong>KINTRA Coach</strong><p class="sub">${p?(p.mode==="maintenance"?"Mode maintien":km(p.distanceKm)+" km")+" · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="setup">${p?"Créer un autre programme":"Définir mon objectif"}</button></div></div>
- <div class="card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
+ <div class="card kintra-settings-card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
  <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
  <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">${state.hevyKey?"Hevy Pro connecté · séances de musculation synchronisées":localStorage.getItem(HEVY_VAULT)?"Connexion chiffrée à déverrouiller":"Connexion facultative · API Hevy Pro"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="connect">Intervals.icu</button><button class="btn secondary" data-action="hevy">Hevy Pro</button></div>
@@ -201,9 +201,9 @@ function profileView(){
  </div>
  <div class="actions"><button class="btn secondary" data-action="refreshData">Actualiser mes activités</button></div>`:""}
  </div>`:""}
- <div class="card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
+ <div class="card kintra-settings-card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
  <p class="sub">Tes programmes et préférences sont enregistrés localement sur cet appareil. Les séances publiées doivent être vérifiées dans Intervals.icu.</p></div>
- <div class="card" data-testid="kintra-backup-settings"><div class="heading">Sauvegarde & restauration</div>
+ <div class="card kintra-settings-card" data-testid="kintra-backup-settings"><div class="heading">Sauvegarde & restauration</div>
  <p class="sub">Transfère tes programmes, anciennes versions et ressentis avec une sauvegarde chiffrée protégée par une phrase secrète personnelle. Aucune clé API, trace GPS ou mesure de santé n'est incluse. L'ancien format JSON non chiffré reste disponible pour compatibilité.</p>
  <div class="actions"><button class="btn" data-action="backupSecure">Sauvegarde chiffrée</button>
  <button class="btn secondary" data-action="backupRestore">Restaurer un fichier</button></div>
@@ -281,12 +281,17 @@ function normalPage(){
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
  }
- return `<div class="app"><header class="top kintra-top">
+ return `<div class="app kintra-ui-17"><header class="top kintra-top">
  <img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">
  <div class="kintra-page-name">${state.selected?"Séance":state.tab==="today"?"Aujourd'hui":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Mon profil"}</div>
- <button class="circle" data-action="tab:profile" aria-label="Mon profil">◎</button></header>
+ <button class="circle" data-action="tab:profile" aria-label="Mon profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></button></header>
  <main class="content">${DEMO?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre. <button class="textButton" data-action="goLive">Ouvrir la version active</button></div>`:!state.connected?`<div class="callout">Mode actif · Connecte ton compte Intervals.icu pour synchroniser les courses et envoyer des séances à l’Apple Watch. <button class="textButton" data-action="connect">Connecter maintenant ›</button></div>`:""}${content}</main></div>
- <nav class="nav" aria-label="Navigation principale">${[["today","☀","Aujourd'hui"],["plan","◎","Coach"],["activities","▥","Progrès"],["profile","☰","Plus"]].map(([id,icon,name])=>`<button data-action="tab:${id}" class="${state.tab===id?"active":""}"><span class="symbol">${icon}</span>${name}</button>`).join("")}</nav>`;
+ <nav class="nav" aria-label="Navigation principale">${[
+  ["today","Aujourd'hui",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>'],
+  ["plan","Coach",'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'],
+  ["activities","Progrès",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M22 20V3"/></svg>'],
+  ["profile","Plus",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>']
+ ].map(([id,name,icon])=>`<button data-action="tab:${id}" class="${state.tab===id?"active":""}" ${state.tab===id?'aria-current="page"':""}><span class="symbol">${icon}</span>${name}</button>`).join("")}</nav>`;
 }
 function sheet(){
  const sh=state.sheet;if(!sh)return"";
@@ -403,7 +408,7 @@ function sheet(){
  <div class="choice">${["easy","interval","tempo","long"].map(k=>`<button data-action="instantType:${k}"><span>${emoji[k]}</span>${labels[k]}</button>`).join("")}</div>`;
  return `<div class="modalShade"><section class="modal" role="dialog" aria-modal="true" aria-label="${e(sh)}">${close}${body}</section></div>`;
 }
-function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?toastHtml(state.toast):"");}
+function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app kintra-ui-17">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?toastHtml(state.toast):"");}
 function wizardValues(){
  const f=state.form;
  if(state.step===0&&f.mode!=="maintenance"){f.raceDate=$("raceDate").value;const t=$("raceTime").value.trim();
