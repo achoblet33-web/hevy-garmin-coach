@@ -113,7 +113,7 @@ export function generateRunningPlan(raw,today,modifiers={}) {
       }
       if(kind==="easy"&&originalKind!=="easy"&&distanceKm>5)distanceKm=Math.min(distanceKm,Math.max(4,round(easyKm)));
       if(date===p.raceDate){kind="race";distanceKm=p.distanceKm;reason="Course principale : objectifs d'allure à confirmer selon la préparation réelle.";}
-      sessions.push({id:\`tsplan-\${p.raceDate}-w\${w+1}-\${date}\`,date,week:w+1,kind,title:name[kind]||name.easy,
+      sessions.push({id:`tsplan-${p.raceDate}-w${w+1}-${date}`,date,week:w+1,kind,title:name[kind]||name.easy,
         distanceKm:round(distanceKm),intensity:kind==="interval"?"RPE 7–8":kind==="tempo"?"RPE 6–7":kind==="race"?"Selon stratégie":"RPE 2–4",
         reason,phase,status:"planned",exportable:["easy","long","interval","tempo"].includes(kind),plannedInitially:originalKind});
       assignedCount++;
@@ -126,7 +126,7 @@ export function generateRunningPlan(raw,today,modifiers={}) {
   }
   const workoutDays=sessions.filter(x=>x.kind!=="rest");
   if(!workoutDays.some(x=>x.date===p.raceDate)){
-    sessions.push({id:\`tsplan-race-\${p.raceDate}\`,date:p.raceDate,week:weeks,kind:"race",title:name.race,distanceKm:p.distanceKm,
+    sessions.push({id:`tsplan-race-${p.raceDate}`,date:p.raceDate,week:weeks,kind:"race",title:name.race,distanceKm:p.distanceKm,
       intensity:"Selon stratégie",reason:"Course principale fixée à l'échéance choisie.",phase:"Affûtage",status:"planned",exportable:false});
   }
   sessions.sort((a,b)=>a.date.localeCompare(b.date)||a.kind.localeCompare(b.kind));
