@@ -24,14 +24,14 @@ function lowerBodySessions(strength,date){
   return day>=add(date,-2)&&day<=date&&(s.exercises||[]).some(x=>lowerBody.test(x.title||x.name||""));
  });
 }
-export function buildCoachReview({plan,activities=[],strength=[],wellness=[],date}={}){
+export function buildCoachReview({plan,activities=[],strength=[],wellness=[],date,pairedRuns={}}={}){
  if(!plan||!validDate(date))return null;
  const runs=(Array.isArray(activities)?activities:[]).filter(isRun);
  const weekFrom=monday(date),weekTo=add(weekFrom,6);
  const planned=(plan.sessions||[]).filter(x=>x.date>=weekFrom&&x.date<=weekTo&&x.kind!=="rest");
  const due=planned.filter(x=>x.date<=date);
  const observed=runs.filter(x=>dateOf(x.startedAt)>=weekFrom&&dateOf(x.startedAt)<=date);
- const matches=reconcileWorkouts(observed,planned);
+ const matches=reconcileWorkouts(observed,planned,pairedRuns);
  const confirmed=matches.filter(x=>x.matchStatus==="confirmed");
  const possible=matches.filter(x=>x.matchStatus==="suggested");
  const legs=lowerBodySessions(strength,date);
@@ -64,7 +64,8 @@ export function buildCoachReview({plan,activities=[],strength=[],wellness=[],dat
   confirmedCount:confirmed.length,possibleCount:possible.length,readiness:readiness.state,
   strengthCount:(Array.isArray(strength)?strength:[]).filter(x=>dateOf(x.startedAt||x.date)>=weekFrom&&dateOf(x.startedAt||x.date)<=date).length,
   alerts,proposals,matching:matches.map(x=>({id:x.id,status:x.matchStatus,
-    actualId:x.actual?.id||null,candidates:x.candidates.map(c=>c.id)}))};
+    actualId:x.actual?.id||null,source:x.source,title:x.title||"Course prévue",date:x.date,
+    candidates:x.candidates.map(c=>c.id),candidateTitles:x.candidates.map(c=>c.title||"Course enregistrée")}))};
 }
 export function previewCoachAdjustment(plan,proposal,date){
  if(!plan||!proposal||!validDate(date))throw Error("Proposition ou plan manquant.");
@@ -88,6 +89,10 @@ export function renderCoachReview(review,enabled=true){
  const actions=enabled?review.proposals.map((p,i)=>
   '<button class="btn secondary full" data-action="coachProposal:'+i+'">'+esc(p.title)+' ›</button>').join(""):
   '<p class="sub">Conseils désactivés dans Coach.</p>';
+ const unverified=review.matching.map((x,i)=>({...x,index:i})).filter(x=>x.status==="suggested");
+ const manual=review.matching.map((x,i)=>({...x,index:i})).filter(x=>x.status==="confirmed"&&x.source==="user_confirmed");
+ const pairingActions=enabled?unverified.map(x=>'<button class="btn secondary full" data-action="coachLink:'+x.index+'">Vérifier : '+esc(x.title)+' ↔ '+esc(x.candidateTitles[0])+'</button>').join(""):"";
+ const unlinkActions=manual.map(x=>'<button class="textButton" data-action="coachUnlink:'+x.index+'">Dissocier : '+esc(x.title)+'</button>').join("");
  const compare=review.recordedKm===null?
   "Aucune sortie enregistrée pour cette période ; réalisé non vérifiable.":
   "Écart indicatif sur les échéances passées : "+(review.deltaKm===null?"non comparable":(review.deltaKm>0?"+":"")+number(review.deltaKm)+" km")+".";
@@ -101,6 +106,8 @@ export function renderCoachReview(review,enabled=true){
    '<div><small>Musculation enregistrée</small><strong>'+review.strengthCount+' séance(s)</strong></div>'+
   '</div><p class="sub">'+esc(compare)+'</p>'+
   '<p class="kintra-coach-v2-matching">'+review.confirmedCount+' correspondance(s) confirmée(s) · '+review.possibleCount+' rapprochement(s) non confirmé(s).</p>'+
+  (pairingActions||unlinkActions?'<div class="kintra-coach-v2-pairing"><strong>Rapprochement manuel des séances</strong>'+pairingActions+unlinkActions+
+   '<small class="sub">L’association est enregistrée sur cet appareil seulement ; la source Intervals.icu reste inchangée.</small></div>':"")+
   '<div class="kintra-coach-v2-signals"><strong>Course × musculation × récupération</strong>'+signals+'</div>'+
   '<div class="kintra-coach-v2-proposals"><strong>Propositions soumises à confirmation</strong>'+
   (review.proposals.length?actions:'<p class="sub">Aucun allègement justifié par les données actuellement disponibles.</p>')+
