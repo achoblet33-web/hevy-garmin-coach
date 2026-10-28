@@ -28,21 +28,24 @@ function activityMap(activities){
  return [...map.values()];
 }
 export function uniqueRunningActivities(activities=[]){return activityMap(activities)}
-export function reconcileWorkouts(activities=[],planned=[]){
+export function reconcileWorkouts(activities=[],planned=[],manualLinks={}){
  const runs=activityMap(activities),results=[];
  const consumed=new Set();
  // First reserve all provable pairings. Never consume a run twice even with duplicate calendar events.
  for(const p of planned||[]){
   const eventId=validId(p?.id),pairedActivity=validId(p?.pairedActivityId);
-  const exact=eventId||pairedActivity?runs.filter(a=>!consumed.has(identity(a))&&(
+  const manuallyLinked=eventId&&manualLinks&&typeof manualLinks==="object"?validId(manualLinks[eventId]):"";
+  const exact=eventId||pairedActivity||manuallyLinked?runs.filter(a=>!consumed.has(identity(a))&&(
    (eventId&&validId(a.pairedEventId)===eventId)||
-   (pairedActivity&&(validId(a.externalId)===pairedActivity||validId(a.id)===pairedActivity))
+   (pairedActivity&&(validId(a.externalId)===pairedActivity||validId(a.id)===pairedActivity))||
+   (manuallyLinked&&validId(a.id)===manuallyLinked)
   )):[];
   const actual=exact.length===1?exact[0]:null;
   if(actual){
    consumed.add(identity(actual));
    results.push({...p,matchStatus:"confirmed",actual,
-    source:eventId&&validId(actual.pairedEventId)===eventId?"paired_event_id":"paired_activity_id",candidates:[]});
+    source:manuallyLinked&&validId(actual.id)===manuallyLinked?"user_confirmed":
+    eventId&&validId(actual.pairedEventId)===eventId?"paired_event_id":"paired_activity_id",candidates:[]});
   }else results.push({...p,matchStatus:"unmatched",actual:null,source:null,candidates:[]});
  }
  // Tentative matches must be one-to-one and never rely on paired activities from another event.
