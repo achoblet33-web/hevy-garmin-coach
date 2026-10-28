@@ -20,7 +20,8 @@ jobs:
         with:
           persist-credentials: false
       - name: ECC AgentShield security scan (read-only, no auto-fix)
-        uses: affaan-m/agentshield@v1
+        uses: affaan-m/agentshield@b0891303bdcd6037376a94263d45cfd2ff3dfb98
         with:
-          scan-path: '.'
-          fail-on-critical: true
+          path: '.'
+          min-severity: medium
+          fail-on-findings: true
