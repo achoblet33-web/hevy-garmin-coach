@@ -90,6 +90,11 @@ Le projet est organisé autour de deux ensembles : un coach local en PWA et un r
 - **Constats :** aucune métrique LCP/INP réelle ; pas de tests VoiceOver, zoom système ou perte de connectivité sur iPhone physique ; CSS d'ensemble volumineux et code d'interface concentré dans un module conséquent.
 - **À faire :** mesures p75 sur appareils représentatifs, tests accessibilité, budgets de ressources, audits d'images/services et refactorisation ciblée sans régression.
 
+### A-08 bis — P1 : notification qui effaçait une saisie en cours
+- **Anomalie reproduite en CI :** la disparition automatique d'un toast déclenchait une reconstruction DOM complète cinq secondes après une action. Une phrase secrète ou une ville déjà saisie pouvait disparaître.
+- **Correction RC :** le toast est ajouté, mis à jour et supprimé sans toucher au formulaire ni au focus ; test de non-régression maintenant une phrase secrète pendant plus de cinq secondes.
+- **À vérifier en conditions réelles :** Safari et clavier virtuel avec réseau lent.
+
 ### A-09 — P2 : exposition API météo en environnement public
 - **Constat :** le relais météo accepte des lectures sans authentification (avec validation de requêtes et timeouts). Pas de mécanisme de rate limiting démontré.
 - **À faire :** protection contre abus, contrôle des quotas et des conditions Open-Meteo/OSM avant diffusion large.
