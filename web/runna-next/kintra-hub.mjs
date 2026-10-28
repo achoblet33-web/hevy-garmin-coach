@@ -31,17 +31,23 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
  const daySessions=plan?.sessions?.filter(x=>x.date===state.chosenDay)||[];
  const next=plan?.sessions?.filter(x=>x.date>state.chosenDay&&x.kind!=="rest").slice(0,2)||[];
  const advice=recommendWorkout({plan,context,date});
+ const featured=daySessions.find(x=>x.kind!=="rest")||next[0]||null;
  const recentStrength=state.activities.filter(x=>x.category==="Musculation").filter(x=>String(x.startedAt||"").slice(0,10)>=dateAdd(date,-6));
  return `<div class="kintra-welcome"><span class="eyebrow">TON POTENTIEL EN MOUVEMENT</span>
  <h2>Ta performance,<br><em>en un regard.</em></h2><p>Un tableau de bord personnel : tes vraies activités, ton entraînement et ta récupération.</p></div>
  ${readiness(context)}
+ ${featured?`<button class="kintra-next-workout" data-action="session:${safe(featured.id)}">
+ <span class="kintra-next-icon">♨</span><span class="kintra-next-main"><small>PROCHAIN ENTRAÎNEMENT · ${short(featured.date)}</small>
+ <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${safe(featured.intensity||"Intensité selon sensations")}</span></span><b>›</b></button>`:
+ `<div class="kintra-next-empty"><strong>Prêt pour la suite ?</strong><p class="sub">Construis un programme adapté à tes objectifs.</p>
+ <button class="btn" data-action="setup">Créer mon programme</button></div>`}
  <div class="kintra-data-grid">
   <article class="kintra-tile"><div class="kintra-card-label">↗ Charge de course · 7 jours</div>
   <div class="kintra-number">${shown(context.weeklyKm)} <small>km</small></div>
   <p class="sub">${context.baselineKm>0?"Moyenne hebdo. précédente : "+shown(context.baselineKm)+" km":"Historique en cours de constitution"}</p></article>
   <article class="kintra-tile"><div class="kintra-card-label">▤ Renforcement · 7 jours</div>
   <div class="kintra-number">${context.strengthCount||recentStrength.length}</div>
-  <p class="sub">Séances visibles dans les sources synchronisées. Hevy direct non connecté.</p></article>
+  <p class="sub">${state.hevyKey?"Source : Hevy Pro synchronisé":state.hevySessions?.length?"Source : Hevy":"Connecte Hevy Pro dans Plus → Connexions"}</p></article>
  </div>
  ${program?program():""}
  <article class="kintra-sheet"><div class="between"><strong>Ta semaine</strong><button class="textButton" data-action="tab:plan">Voir le plan ›</button></div>
