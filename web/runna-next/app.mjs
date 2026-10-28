@@ -20,9 +20,9 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
-function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;}catch{}}
-function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions}));}catch{}}
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
+function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
@@ -286,6 +286,15 @@ function sheet(){
  ${localStorage.getItem(HEVY_VAULT)?`<label>Déverrouiller une clé sauvegardée<input id="hevyUnlockPass" type="password" autocomplete="off"></label>
  <div class="actions"><button class="btn secondary full" data-action="hevyUnlock">Déverrouiller Hevy</button></div>`:""}
  <div class="actions"><button class="btn ghost full" data-action="hevyDisconnect">Déconnecter Hevy</button></div>`;
+ if(sh==="weatherLocation")body=`<h2>Choisir ma météo</h2>
+ <p class="sub">Recherche une ville, ou autorise ponctuellement le GPS. Le lieu choisi reste sur cet appareil. Les coordonnées transmises au service météo sont arrondies.</p>
+ <label>Ville ou commune<input id="weatherCity" placeholder="Ex. Le Lamentin, Fort-de-France, Lyon..." maxlength="80" autocomplete="off"></label>
+ <div class="actions"><button class="btn full" data-action="weatherSearch">Rechercher la ville</button></div>
+ ${state.weatherResults.length?`<div class="kintra-place-results">${state.weatherResults.map((p,i)=>`<button class="training" data-action="weatherChoose:${i}"><strong>${e(p.label)}</strong><span class="arrow">›</span></button>`).join("")}</div>`:
+ `<p class="sub">Aucun lieu choisi dans cette recherche.</p>`}
+ <div class="line"></div>
+ <button class="btn secondary full" data-action="weatherGPS">Utiliser ma position avec mon accord</button>
+ ${state.weatherPlace?`<p class="sub">Lieu enregistré : ${e(state.weatherPlace.label)}.</p>`:""}`;
  if(sh==="watch")body=`<h2>Préparer sur l'Apple Watch</h2><p class="sub">Une séance structurée sera publiée dans Intervals.icu uniquement après ton accord.</p>
  <div class="formGrid"><label>Type<select id="watchKind">${["easy","long","tempo","interval"].map(k=>`<option value="${k}" ${state.watch?.kind===k?"selected":""}>${labels[k]}</option>`).join("")}</select></label>
  <label>Jour prévu<input id="watchDate" type="date" value="${state.watch?.date||add(today(),1)}" min="${today()}"></label>
@@ -329,16 +338,31 @@ async function api(path,options={}){
  if(!res.ok)throw Error(data.error||"Intervals.icu indisponible (HTTP "+res.status+").");
  return data;
 }
-async function refreshWeather(){
- if(!navigator.geolocation)throw Error("La géolocalisation n'est pas disponible sur cet appareil.");
- const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,
-   {enableHighAccuracy:false,timeout:12000,maximumAge:1800000}));
- const lat=Math.round(position.coords.latitude*100)/100,lon=Math.round(position.coords.longitude*100)/100;
- const response=await fetch("/v3/weather?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon),
-  {cache:"no-store",signal:AbortSignal.timeout(15000)});
- const data=await response.json();
+async function refreshWeather(place=state.weatherPlace){
+ if(!place||!Number.isFinite(Number(place.latitude))||!Number.isFinite(Number(place.longitude)))
+  throw Error("Choisis une ville pour consulter les prévisions.");
+ const response=await fetch("/v3/weather?lat="+encodeURIComponent(place.latitude)+"&lon="+encodeURIComponent(place.longitude),
+  {cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw Error(data.error||"Météo momentanément indisponible.");
- state.weather=data;draw();
+ state.weather=data;state.weatherPlace=place;persist();draw();
+}
+async function searchWeatherPlace(){
+ const name=$("weatherCity")?.value.trim()||"";
+ if(name.length<2)throw Error("Saisis au moins deux caractères pour une ville.");
+ const res=await fetch("/v3/places?name="+encodeURIComponent(name),{cache:"no-store",signal:AbortSignal.timeout(14000)});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok||!data.ok)throw Error(data.error||"Recherche indisponible.");
+ state.weatherResults=Array.isArray(data.results)?data.results:[];
+ draw();
+}
+async function selectWeatherGPS(){
+ if(!navigator.geolocation)throw Error("La géolocalisation n'est pas prise en charge.");
+ const pos=await new Promise((ok,fail)=>navigator.geolocation.getCurrentPosition(ok,fail,
+   {enableHighAccuracy:false,timeout:13000,maximumAge:1800000}));
+ const place={label:"Position approximative",latitude:Math.round(pos.coords.latitude*100)/100,
+ longitude:Math.round(pos.coords.longitude*100)/100};
+ await refreshWeather(place);state.sheet=null;draw();
 }
 async function syncHevy(){
  if(!state.hevyKey)return;
@@ -407,7 +431,13 @@ async function perform(action,value){
   state.hevyKey=null;state.hevySessions=[];state.strength=state.intervalsStrength;
   localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
  }
- if(action==="weather"){await refreshWeather();return;}
+ if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];draw();return;}
+ if(action==="weatherSearch"){await searchWeatherPlace();return;}
+ if(action==="weatherChoose"){
+  const n=Number(value);if(!Number.isInteger(n)||n<0||n>=state.weatherResults.length)throw Error("Lieu introuvable.");
+  const place=state.weatherResults[n];await refreshWeather(place);state.sheet=null;draw();return;
+ }
+ if(action==="weatherGPS"){await selectWeatherGPS();return;}
  if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;draw();return;}
  if(action==="day"){state.chosenDay=value;draw();return;}
  if(action==="week"){state.week=Math.max(0,Math.min(state.plan.totalWeeks-1,state.week+Number(value)));draw();return;}
@@ -540,6 +570,7 @@ function start(){
   try{state.plan=generateRunningPlan(sample(),today());state.week=0;}catch{}
  }
  draw();if(DEMO)sync();
+ if(state.weatherPlace)refreshWeather(state.weatherPlace).catch(()=>{});
 }
 start();
 if ("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
