@@ -361,7 +361,7 @@ async function loadLaps(){
  finally{state.activityLoading=false;draw();}
 }
 async function sync(){
- if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=[];state.sourceMode="disconnected";draw();return;}
+ if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=state.hevySessions||[];state.sourceMode="disconnected";draw();return;}
  try{
   const data=await api("/dashboard?days=90");
   state.activities=Array.isArray(data.activities)?data.activities:[];
