@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {generateRunningPlan,applyTodayRecommendation,getWeek,moveWorkout,normalizePlanProfile} from "../web/plan-engine.mjs";
 const today="2026-10-28";
 const profile={distanceKm:10,raceDate:"2027-02-14",weeklyKm:20,frequency:3,longDay:6,availableDays:[1,3,6]};
-const build=(x={})=>generateRunningPlan({...profile,...x},today);
+const build=(x={},modifiers={})=>generateRunningPlan({...profile,...x},today,modifiers);
 test("date and goal validation",()=>{
   assert.throws(()=>build({raceDate:"2026-11-01"}),/échéance/);
   assert.throws(()=>build({raceDate:"2027-02-30"}),/Date/);
@@ -50,7 +50,7 @@ test("Hevy leg session proposes to lighten quality, without mutating plan",()=>{
 test("move workout validates collisions and keeps other workouts",()=>{
  const plan=build(); const a=plan.sessions.find(s=>s.kind==="easy");
  const date="2026-11-02";
- assert.throws(()=>moveWorkout(plan,a.id,profile.raceDate),/Une autre|déplacement|déplacement|course/i); 
+ assert.throws(()=>moveWorkout(plan,a.id,"2027-03-01"),/hors du programme/i); 
  const unused=Array.from({length:30},(_,i)=>{const d=new Date(today+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+i+1);return d.toISOString().slice(0,10)}).find(d=>!plan.sessions.some(s=>s.date===d));
  if(unused){
    const changed=moveWorkout(plan,a.id,unused);
