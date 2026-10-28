@@ -35,6 +35,8 @@ jobs:
           node --check web/plan-engine.mjs
           node --check web/runna-style-plan.mjs
           node --check web/runna-next/app.mjs
+          node --check web/runna-next/after-run.mjs
+          node --check web/runna-next/workout-reconciliation.mjs
           node --check Backend/worker-v30.js
           node --check Backend/running-workouts.mjs
           node --check preview/worker.js
