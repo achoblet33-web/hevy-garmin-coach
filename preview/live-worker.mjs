@@ -155,7 +155,7 @@ export default {
    if(u.pathname==="/v3/dashboard"&&request.method==="GET")return dashboard(request,key);
    if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/intervals$/.test(u.pathname)&&request.method==="GET")
      return activityIntervals(request,key);
-   if(/^\\/v3\\/activities\\/[A-Za-z0-9_-]{1,80}\\/detail$/.test(u.pathname)&&request.method==="GET")
+   if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/detail$/.test(u.pathname)&&request.method==="GET")
      return activityDetail(request,key);
    if(u.pathname==="/v3/workouts/publish"&&request.method==="POST")return publish(request,key);
    return json({error:"Route ou méthode inconnue."},404);
