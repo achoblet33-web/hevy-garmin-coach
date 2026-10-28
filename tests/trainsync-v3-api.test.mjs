@@ -22,7 +22,7 @@ test("6x800m preview is deterministic and does not write",async()=>{
  const response=await api.fetch(request("/v3/workouts/preview","POST",w),env,{});
  assert.equal(response.status,200);
  const data=await response.json();
- assert.match(data.preview.description,/6x\\n- 800mtr Z4 Pace/);
+ assert.match(data.preview.description,/6x\n- 800mtr Z4 Pace/);
  assert.match(data.preview.external_id,/trainsync3-/);
 });
 test("publishing uses documented Intervals bulk upsert and verifies event",async()=>{
