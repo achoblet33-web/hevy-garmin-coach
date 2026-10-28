@@ -41,6 +41,9 @@ jobs:
           node --check web/runna-next/kintra-weather.mjs
           node --check web/runna-next/kintra-insights.mjs
           node --check web/runna-next/kintra-presenter.mjs
+          node --check web/runna-next/kintra-map.mjs
+          node --check web/runna-next/kintra-hevy.mjs
+          node --check preview/kintra-activity.mjs
           node --check preview/weather-relay.mjs
           node --check web/runna-next/workout-reconciliation.mjs
           node --check Backend/worker-v30.js
