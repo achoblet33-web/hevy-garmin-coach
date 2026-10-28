@@ -199,3 +199,31 @@ a,.textButton{color:#9f163a}
 .kintra-coach-review .sub{line-height:1.5}
 .kintra-insight-tip{background:#fff1f4;padding:12px;border-radius:12px;border-left:3px solid #bd2a4c;font-size:12px;line-height:1.5;margin:10px 0;color:#6e2641}
 @media (max-width:350px){.kintra-recovery-signals{grid-template-columns:repeat(2,minmax(0,1fr))}.kintra-data-grid{gap:6px}.kintra-tile{padding:12px 8px}}
+
+/* FIX iPhone: a modal result (including a long city name) must never expand the viewport.
+   Keep a genuine responsive phone viewport; do not disable browser pinch zoom. */
+html,body,#app{max-inline-size:100%;min-inline-size:0}
+.app{inline-size:100%;min-inline-size:0}
+.modalShade{
+ inline-size:100%;max-inline-size:100vw;min-inline-size:0;
+ overflow-x:clip;box-sizing:border-box;
+ padding-inline:env(safe-area-inset-left) env(safe-area-inset-right);
+ overscroll-behavior:contain;
+}
+.modal{
+ inline-size:100%;width:100%;max-inline-size:min(100%,440px);min-inline-size:0;
+ flex:0 1 440px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;
+ max-block-size:min(90dvh,calc(100dvh - env(safe-area-inset-top) - 8px));
+ overflow-wrap:anywhere;-webkit-overflow-scrolling:touch;
+}
+.modal>*{max-inline-size:100%;min-inline-size:0}
+.modal label,.modal .actions,.modal .kintra-place-results,.modal .training,.modal .callout{min-inline-size:0;max-inline-size:100%}
+.modal input:not([type=checkbox]),.modal select,.modal textarea{font-size:16px;inline-size:100%;max-inline-size:100%;min-inline-size:0}
+.kintra-place-results{min-inline-size:0;inline-size:100%;max-inline-size:100%;overflow-x:hidden}
+.kintra-place-results .training{display:flex;inline-size:100%;min-inline-size:0;max-inline-size:100%;overflow:hidden;gap:8px}
+.kintra-place-results .training strong{flex:1 1 0;min-inline-size:0;overflow-wrap:anywhere;word-break:normal;white-space:normal}
+.kintra-place-results .training .arrow{flex:0 0 auto}
+@media(max-width:480px){
+ .modalShade{align-items:flex-end;justify-content:center}
+ .modal{max-inline-size:100%;border-radius:22px 22px 0 0;padding:20px 16px calc(22px + env(safe-area-inset-bottom))}
+}
