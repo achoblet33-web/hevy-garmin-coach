@@ -27,7 +27,7 @@ export function renderTrainingReview(activities=[],planned=[]){
   <div class="between"><div><div class="eyebrow">Après la course</div><h3 class="heading" style="margin-top:8px">Bilan de tes entraînements</h3></div>
     <span class="pill muted">${completed.length} séance${completed.length!==1?"s":""} liée${completed.length!==1?"s":""}</span></div>
   <p class="sub">La montre enregistre ta sortie, Companion la transmet à Intervals.icu. TrainSync confirme l'association uniquement quand la source fournit son identifiant de séance.</p>
-  ${rows||`<div class="empty"><strong>Aucune course terminée importée</strong>Synchronise Companion après ta course, puis actualise TrainSync.</div>`}
+  ${rows||`<div class="empty"><strong>Aucune course terminée importée</strong>Synchronise Companion après ta course, puis actualise KINTRA.</div>`}
  </article>`;
 }
 export function renderActivityReport({activity,activities=[],planned=[],plan=null,segments=null,loading=false,feedback=null}={}){
@@ -40,12 +40,17 @@ export function renderActivityReport({activity,activities=[],planned=[],plan=nul
  const delta=known&&plannedKm&&info.distanceKm!=null?+(info.distanceKm-plannedKm).toFixed(2):null;
  const laps=Array.isArray(segments?.segments)?segments.segments:[];
  const insight=analyzeRun({activity,activities,segments:laps,feedback});
- const lapRows=laps.map((lap,i)=>`<div class="step">
-   <div class="number">${i+1}</div>
-   <div style="flex:1;min-width:0"><strong>${e(lap.label||"Segment "+(i+1))}</strong>
-    <small>${nf(lap.distanceMeters)} m · ${nf(lap.durationSeconds)} s · ${pace(lap.averagePaceMinKm)}</small>
-    ${lap.averageHeartRate?`<small>FC moyenne : ${nf(lap.averageHeartRate)} bpm</small>`:""}
-   </div></div>`).join("");
+ const validPaces=laps.map(x=>Number(x.averagePaceMinKm)).filter(x=>Number.isFinite(x)&&x>0);
+ const bestPace=validPaces.length?Math.min(...validPaces):null;
+ const lapRows=laps.length?`<div class="kintra-laps-scroll"><table class="kintra-laps-table">
+  <thead><tr><th>Rep.</th><th>Distance</th><th>Allure</th><th>FC moy.</th></tr></thead>
+  <tbody>${laps.map((lap,i)=>`<tr><td>${i+1}<small>${e(lap.label||"Tour")}</small></td>
+   <td>${nf(lap.distanceMeters)} m</td><td><strong>${pace(lap.averagePaceMinKm)}</strong>
+   <span class="kintra-split-bar"><i style="width:${bestPace&&Number(lap.averagePaceMinKm)>0?Math.min(100,Math.max(5,Math.round(bestPace/Number(lap.averagePaceMinKm)*100))):0}%"></i></span>
+   <small>${lap.durationSeconds==null?"Durée indisponible":nf(lap.durationSeconds)+" s"}</small></td>
+   <td>${lap.averageHeartRate==null?"—":nf(lap.averageHeartRate)+" bpm"}</td></tr>`).join("")}</tbody>
+ </table></div>`:"";
+
  return `<button class="textButton" data-action="backActivity">‹ Retour aux activités</button>
  <div class="detailsHeader"><div class="eyebrow">Séance terminée · ${date(activity.startedAt)}</div>
   <h2>${e(activity.title||"Ma course")}</h2>
@@ -58,11 +63,11 @@ export function renderActivityReport({activity,activities=[],planned=[],plan=nul
    <div class="stat"><strong>${nf(info.trainingLoad)}</strong><small>Charge</small></div>
    <div class="stat"><strong>${nf(info.rpe)}</strong><small>RPE Intervals</small></div></div>
   ${known?`<div class="callout" style="margin-top:12px">Séance liée : ${e(relative?.title||"identifiant "+activity.pairedEventId)}</div>`:
-   `<p class="warning">Le lien avec la séance prévue n'est pas certifié. TrainSync ne déclare pas la séance du programme « réalisée » automatiquement.</p>`}
+   `<p class="warning">Le lien avec la séance prévue n'est pas certifié. KINTRA ne déclare pas la séance du programme « réalisée » automatiquement.</p>`}
   ${delta!=null?`<p class="sub">Prévu : ${nf(plannedKm)} km · Écart réel : ${delta>=0?"+":""}${nf(delta)} km.</p>`:""}
   ${local?`<p class="sub">Une séance du plan local existe ce jour-là, sans preuve que c'est la même course.</p>`:""}
  </div>
- <div class="card"><div class="between"><h3 class="heading">Tours et fractions</h3><button class="textButton" data-action="loadLaps" ${loading?"disabled":""}>${loading?"Lecture…":"Actualiser"}</button></div>
+ <div class="card"><div class="between"><h3 class="heading">Analyse des temps</h3><button class="textButton" data-action="loadLaps" ${loading?"disabled":""}>${loading?"Lecture…":"Actualiser"}</button></div>
   ${loading?`<p class="sub">Lecture des fractions depuis Intervals.icu…</p>`:
    segments?.error?`<p class="warning">${e(segments.error)}</p>`:
    lapRows||`<div class="empty"><strong>Pas de segments détaillés disponibles</strong>Le détail dépend des tours enregistrés et analysés dans Intervals.icu.</div>`}
