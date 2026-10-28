@@ -1,5 +1,6 @@
 import {reconcileWorkouts,summarizeRun,findPlanWorkout} from "./workout-reconciliation.mjs";
 import {analyzeRun} from "./kintra-insights.mjs";
+import {renderRouteMap} from "./kintra-map.mjs";
 const e=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nf=x=>x==null||!Number.isFinite(Number(x))?"—":Number(x).toLocaleString("fr-FR",{maximumFractionDigits:2});
 const date=s=>{const iso=String(s||"").slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return "Date inconnue";
@@ -30,7 +31,7 @@ export function renderTrainingReview(activities=[],planned=[]){
   ${rows||`<div class="empty"><strong>Aucune course terminée importée</strong>Synchronise Companion après ta course, puis actualise KINTRA.</div>`}
  </article>`;
 }
-export function renderActivityReport({activity,activities=[],planned=[],plan=null,segments=null,loading=false,feedback=null}={}){
+export function renderActivityReport({activity,activities=[],planned=[],plan=null,segments=null,detail=null,mapEnabled=false,loading=false,feedback=null}={}){
  if(!activity)return `<div class="card empty">Cette course n'est pas disponible dans l'historique synchronisé.</div>`;
  const info=summarizeRun(activity),known=!!activity.pairedEventId;
  const linked=planned.find(p=>String(p.id)===String(activity.pairedEventId));
@@ -58,6 +59,23 @@ export function renderActivityReport({activity,activities=[],planned=[],plan=nul
   <div class="statrow"><div class="stat"><strong>${nf(info.distanceKm)}</strong><small>Km courus</small></div>
    <div class="stat"><strong>${nf(info.durationMinutes)}</strong><small>Minutes</small></div>
    <div class="stat"><strong>${pace(info.paceMinKm)}</strong><small>Allure moyenne</small></div></div></div>
+ ${loading?`<div class="card"><strong>Chargement du parcours et des statistiques GPS…</strong></div>`:
+ detail?.route?renderRouteMap(detail.route.points||[],mapEnabled):`<div class="card kintra-map-empty" data-testid="route-map-empty">
+  <strong>Parcours non encore disponible</strong><p class="sub">Ouvre une activité synchronisée et actualise les données GPS.</p></div>`}
+ ${detail?.note?`<p class="sub kintra-map-note">${e(detail.note)}</p>`:""}
+ ${detail?.detail?`<article class="card kintra-complete-metrics" data-testid="complete-run-metrics">
+ <span class="eyebrow">INFORMATIONS COMPLÉMENTAIRES</span><h3 class="heading">Données de ta course</h3>
+ <div class="kintra-more-metrics">${[
+ ["Dénivelé +",detail.detail.elevationGain==null?"—":nf(detail.detail.elevationGain)+" m"],
+ ["Dénivelé −",detail.detail.elevationLoss==null?"—":nf(detail.detail.elevationLoss)+" m"],
+ ["Vitesse max.",detail.detail.maxSpeedKmh==null?"—":nf(detail.detail.maxSpeedKmh)+" km/h"],
+ ["FC max.",detail.detail.maxHeartRate==null?"—":nf(detail.detail.maxHeartRate)+" bpm"],
+ ["Cadence moy.",detail.detail.averageCadence==null?"—":nf(detail.detail.averageCadence)+" pas/min"],
+ ["Puissance moy.",detail.detail.power==null?"—":nf(detail.detail.power)+" W"],
+ ["Temps en mouvement",detail.detail.movingMinutes==null?"—":nf(detail.detail.movingMinutes)+" min"],
+ ["Durée écoulée",detail.detail.elapsedMinutes==null?"—":nf(detail.detail.elapsedMinutes)+" min"],
+ ].map(([name,value])=>`<div><small>${name}</small><strong>${value}</strong></div>`).join("")}</div>
+ </article>`:""}
  <div class="card"><div class="eyebrow">Analyse</div><h3 class="heading">Résultat de ta course</h3>
   <div class="statrow"><div class="stat"><strong>${nf(info.averageHeartRate)}</strong><small>FC moyenne</small></div>
    <div class="stat"><strong>${nf(info.trainingLoad)}</strong><small>Charge</small></div>
