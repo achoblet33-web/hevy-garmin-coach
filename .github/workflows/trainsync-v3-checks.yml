@@ -2,15 +2,28 @@ name: TrainSync v3 checks
 on:
   pull_request:
     paths:
-      - "Backend/worker-v30.js"
-      - "Backend/running-workouts.mjs"
-      - "web/trainsync-v3.js"
+      - "Backend/**"
+      - "web/**"
+      - "preview/**"
       - "tests/**"
+      - "package.json"
+      - ".github/workflows/trainsync-v3-checks.yml"
+  push:
+    branches: ["feat/trainsync-3-intervals-hub"]
+    paths:
+      - "Backend/**"
+      - "web/**"
+      - "preview/**"
+      - "tests/**"
+      - "package.json"
       - ".github/workflows/trainsync-v3-checks.yml"
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,5 +34,11 @@ jobs:
           node --check web/trainsync-v3.js
           node --check Backend/worker-v30.js
           node --check Backend/running-workouts.mjs
-      - name: Workout generation unit tests
-        run: node --test tests/trainsync-v3.test.mjs
+          node --check preview/worker.js
+          node --check preview/server.mjs
+      - name: Unit and API tests (no network keys)
+        run: npm test
+      - name: Wrangler package build validation only (NO DEPLOY)
+        run: |
+          npx --yes wrangler@latest deploy --dry-run --config Backend/wrangler.jsonc
+          npx --yes wrangler@latest deploy --dry-run --config preview/wrangler.jsonc
