@@ -81,7 +81,7 @@ try{
  assert.match(await active.locator("#app").innerText(),/Mode actif/);
  assert.doesNotMatch(await active.locator("#app").innerText(),/Mode démonstration/);
  await active.locator('.nav button[data-action="tab:profile"]').click();
- await active.locator('button[data-action="connect"]').click();
+ await active.locator('button[data-action="connect"]').first().click();
  assert.match(await active.locator(".modal").innerText(),/Connecter Intervals.icu/);
  await active.locator("#apiToken").waitFor();
  await active.locator("#apiVaultPass").waitFor();
