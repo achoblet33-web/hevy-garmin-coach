@@ -108,3 +108,49 @@ a,.textButton{color:#9f163a}
 .kintra-mode-picker button.active{background:linear-gradient(125deg,#71102d,#c51c45);color:#fff;border-color:#aa3955}
 .kintra-mode-picker button.active small,.kintra-mode-picker button.active span{color:#ffced8}
 @media(max-width:370px){.kintra-data-grid{grid-template-columns:1fr 1fr}.kintra-ring{width:70px;height:70px;font-size:16px}.kintra-header-logo{width:105px}}
+
+/* KINTRA image-reference refinement: four phone panels, restrained crimson contrasts. */
+.kintra-next-workout{display:flex;gap:12px;align-items:center;width:100%;border:0;
+  background:linear-gradient(112deg,#690b27 0%,#9a1235 51%,#e52e52 100%);color:#fff;
+  border-radius:19px;text-align:left;box-shadow:0 8px 21px rgba(107,10,37,.19);padding:19px 16px;min-height:105px}
+.kintra-next-icon{width:37px;height:42px;border-radius:12px;display:grid;place-items:center;
+  background:rgba(255,255,255,.14);color:#ffd5dd;font-size:25px;flex-shrink:0}
+.kintra-next-main{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.kintra-next-main small{color:#ffd5df;font-size:10px;letter-spacing:.025em}
+.kintra-next-main strong{color:#fff;font-size:18px;line-height:1.2;letter-spacing:-.45px}
+.kintra-next-main span{color:#fff2f4;font-size:12px}
+.kintra-next-workout>b{font-size:28px;font-weight:400}
+.kintra-next-empty{border-radius:19px;border:1px solid #efcfd8;background:linear-gradient(110deg,#fff,#fff0f3);padding:19px}
+.kintra-next-empty strong{color:#651d37}
+.kintra-coach-switch{margin:7px 0 14px}
+.kintra-coach-switch button{min-height:97px}
+.kintra-toggle{width:51px;height:31px;min-width:51px;border-radius:100px;position:relative;
+  border:1px solid #d8b7c0;background:#c8b5bf;padding:3px;transition:background .2s ease}
+.kintra-toggle.on{background:#a41439;border-color:#a41439}
+.kintra-toggle span{display:block;width:23px;height:23px;background:#fff;border-radius:50%;box-shadow:0 1px 3px #0002;
+  transition:transform .2s ease}
+.kintra-toggle.on span{transform:translateX(20px)}
+.kintra-progress-tabs{background:#f5ecf0;padding:5px;display:grid;grid-template-columns:1fr 1fr 1.35fr;
+  gap:3px;border-radius:13px;border:1px solid #f2e2e7}
+.kintra-progress-tabs button{border:0;border-radius:9px;background:transparent;font-size:11px;
+  color:#846576;padding:11px 3px;font-weight:680;white-space:normal}
+.kintra-progress-tabs button.active{background:#7a0c2b;color:#fff;box-shadow:0 2px 7px #851b3633}
+.kintra-hr-row{display:grid;grid-template-columns:78px minmax(0,1fr) 62px;align-items:center;gap:7px;
+  padding:10px 0;border-top:1px solid #f0e4e6;font-size:10px;color:#7f6570}
+.kintra-hr-row strong{font-size:11px;text-align:right;color:#711530}
+.kintra-hr-track{height:8px;border-radius:6px;background:#f5e3e8;overflow:hidden}
+.kintra-hr-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#a00d32,#e14360)}
+.kintra-session-header{background:#fff;color:#531c33;border:1px solid #ecdee2;
+  box-shadow:none;padding:21px;border-radius:21px}
+.kintra-session-header h2{color:#351325}
+.kintra-session-header .sub{color:#896c79}
+.kintra-session-header .eyebrow{color:#9b2b50}
+.kintra-session-header .pill{color:#85304c;background:#fdeef2;border-color:#f4dfe5}
+.kintra-session-context{border:1px solid #f7dadd;border-radius:16px;
+  background:#fff0f3;padding:17px;color:#7d1d3d}
+.kintra-session-context strong{color:#881c3d}
+.kintra-session-context .sub{margin-top:8px}
+.kintra-next-workout:focus-visible,.kintra-progress-tabs button:focus-visible,
+.kintra-mode-picker button:focus-visible,.kintra-toggle:focus-visible{
+ outline:3px solid #9d1e49;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.kintra-toggle,.kintra-toggle span{transition:none}}
