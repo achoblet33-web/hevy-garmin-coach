@@ -4,7 +4,22 @@
   const GOAL_KEY = "trainsync-v3-running-goal";
   let dashboard = null, preview = null, requestBusy = false;
   const DEMO = new URLSearchParams(location.search).get("demo") === "1";
+  const STAGING_UI = location.hostname === "trainsync-staging-demo-staging.up.railway.app";
+  let livePreviewOrigin = null, livePreviewToken = null;
+  const inLivePreview = () => Boolean(STAGING_UI && livePreviewOrigin && livePreviewToken);
   async function requestV3(path, options = {}, timeout = 20000) {
+    if (inLivePreview()) {
+      // Token is memory-only. Never send it to Railway, localStorage, GitHub or the old production Worker.
+      const response=await fetch(livePreviewOrigin + path,{
+        method:options.method || "GET",
+        headers:{"Authorization":"Bearer " + livePreviewToken,...(options.body?{"Content-Type":"application/json"}:{})},
+        ...(options.body?{body:options.body}:{}),
+        cache:"no-store",signal:AbortSignal.timeout(timeout)
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error || "Worker Preview HTTP "+response.status);
+      return data;
+    }
     if (!DEMO) return apiRequest(path, options, timeout);
     // Preview is strictly synthetic: no tokens, health data or production requests.
     const response = await fetch(path, {
@@ -50,6 +65,12 @@
           <p class="ts3-muted" id="ts3SyncNote">Le suivi du jour utilise les données récupérées depuis Intervals.icu et Hevy.</p>
           <div class="ts3-buttonrow"><button type="button" id="ts3Refresh" class="ts3-action">↻ Actualiser mes données</button>
           <a class="ts3-secondary" href="https://intervals.icu/" target="_blank" rel="noopener">Ouvrir Intervals.icu</a></div></div>
+        ${STAGING_UI ? `<div class="ts3-panel"><h3>Connexion au Preview Cloudflare (facultative)</h3>
+          <p class="ts3-muted">Les identifiants restent uniquement en mémoire pendant cette visite. Utilise une URL <strong>Preview</strong> Cloudflare, jamais l'URL du Worker de production.</p>
+          <div class="ts3-fields"><label class="ts3-wide">URL de préproduction<input id="ts3PreviewApi" type="url" placeholder="https://trainsync-v3-staging-hevy-garmin-coach.xxxxx.workers.dev" autocomplete="off"></label>
+          <label class="ts3-wide">APP_TOKEN du Preview<input type="password" id="ts3PreviewToken" placeholder="Jeton de préproduction" autocomplete="off"></label></div>
+          <div class="ts3-buttonrow"><button class="ts3-action" type="button" id="ts3PreviewConnect">Connecter la préproduction</button><button class="ts3-secondary" type="button" id="ts3PreviewDisconnect">Revenir à la simulation</button></div>
+          <p id="ts3PreviewConnectNote" class="ts3-muted">Aucun accès aux données réelles tant que la connexion n'est pas activée.</p></div>` : ""}
         <div class="ts3-panel"><h3>Vue d'ensemble</h3><div class="ts3-grid" id="ts3Stats">
           <div class="ts3-stat"><strong>—</strong><small>Km sur 7 j</small></div><div class="ts3-stat"><strong>—</strong><small>Km sur 28 j</small></div><div class="ts3-stat"><strong>—</strong><small>Courses sur 28 j</small></div></div>
           <p class="ts3-muted" id="ts3LoadNote">En attente de données sportives réelles.</p></div>
@@ -93,7 +114,7 @@
     const fatigue=legFatigue(dashboard.strength); byId("ts3Legs").innerHTML=`<strong>${esc(fatigue.label)}</strong><div>${fatigue.detail}</div>`;
     const source=dashboard.sources;
     const ok=source.intervals?.ok && source.calendar?.ok;
-    byId("ts3Source").textContent=dashboard.demo?"DÉMO · aucune donnée réelle":(ok?"Intervals connecté":"Synchronisation partielle");
+    byId("ts3Source").textContent=dashboard.demo?"DÉMO · aucune donnée réelle":(ok?"Intervals connecté (préproduction)":"Synchronisation partielle");
     byId("ts3SyncNote").textContent=dashboard.demo?"Simulation publique isolée : aucune information personnelle et aucune connexion au compte Intervals.icu.":((dashboard.warnings || []).length?dashboard.warnings.join(" · "):"Intervals.icu : source de référence running, activités et calendrier. Hevy : détail des séries.");
     const plans=dashboard.planned.slice().sort((a,b)=>a.date.localeCompare(b.date)).filter(a=>a.date>=localDay(-1)).slice(0,8);
     byId("ts3Calendar").innerHTML=plans.length?plans.map(e=>`<div class="ts3-entry"><div><strong>${esc(e.title)}</strong><small>${esc(e.type)} · ${e.structured?"structurée":"structure non confirmée"}</small></div><small>${dateFr(e.date)}</small></div>`).join(""):"Aucune séance à venir dans le calendrier interrogé.";
@@ -170,6 +191,33 @@
     byId("ts3GoalDate").value=g.date||"";byId("ts3GoalTime").value=g.time||"";byId("ts3GoalFrequency").value=String(g.frequency||3);
     byId("ts3WorkoutDate").value=localDay(1);byId("ts3WorkoutDate").min=localDay();byId("ts3WorkoutKind").addEventListener("change",kindChanged);
     ["ts3Duration","ts3Reps","ts3Meters","ts3WorkoutDate"].forEach(id=>byId(id).addEventListener("input",()=>{preview=null;byId("ts3Publish").disabled=true;byId("ts3Preview").textContent="Prévisualise de nouveau la séance après toute modification.";}));
+    if (STAGING_UI) {
+      byId("ts3PreviewConnect")?.addEventListener("click",async()=>{
+        const text=byId("ts3PreviewApi").value.trim(), token=byId("ts3PreviewToken").value.trim();
+        try {
+          const u=new URL(text);
+          if(u.protocol!=="https:" || !u.hostname.endsWith(".workers.dev")
+            || u.hostname==="hevy-garmin-coach.planetpizza.workers.dev" || u.pathname!=="/"
+            || u.search || u.hash)throw Error("Utilise exclusivement l'URL HTTPS d'un Preview Cloudflare.");
+          if(token.length<12)throw Error("Le jeton de préproduction semble incomplet.");
+          livePreviewOrigin=u.origin;livePreviewToken=token;
+          const status=await requestV3("/v3/status");
+          if(!status?.ok || !status.intervals?.configured)throw Error("Le Preview répond, mais Intervals.icu n'est pas configuré.");
+          byId("ts3PreviewToken").value="";
+          byId("ts3PreviewConnectNote").textContent="Préproduction connectée : les prochains appels iront directement au Preview Cloudflare, depuis ton navigateur.";
+          await refresh();
+        }catch(error) {
+          livePreviewOrigin=null;livePreviewToken=null;
+          byId("ts3PreviewConnectNote").textContent="Connexion refusée : "+(error.message||"erreur réseau");
+        }
+      });
+      byId("ts3PreviewDisconnect")?.addEventListener("click",()=>{
+        livePreviewOrigin=null;livePreviewToken=null;dashboard=null;preview=null;
+        byId("ts3PreviewConnectNote").textContent="Déconnecté. Aucune clé conservée.";
+        byId("ts3Publish").disabled=true;byId("ts3Preview").textContent="";
+        refresh();
+      });
+    }
     byId("ts3WorkoutForm").addEventListener("submit",makePreview);byId("ts3Publish").addEventListener("click",publish);
     byId("ts3SaveGoal").addEventListener("click",saveGoal);byId("ts3Refresh").addEventListener("click",refresh);
     if(typeof activateView==="function")activateView("performance");
