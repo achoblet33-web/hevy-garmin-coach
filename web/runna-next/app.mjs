@@ -228,7 +228,7 @@ function sheet(){
  <div class="actions"><button class="btn full" data-action="saveFeedback">Enregistrer le ressenti</button></div>`;
  if(sh==="connect")body=DEMO?
   `<h2>Mode démonstration</h2><p class="sub">Ouvre la version active pour te connecter à ton vrai compte Intervals.icu. Les données de cette démonstration resteront fictives.</p>
-    <button class="btn full" data-action="goLive">Passer à TrainSync actif</button>`:
+    <button class="btn full" data-action="goLive">Passer à KINTRA actif</button>`:
   `<h2>Connecter Intervals.icu</h2>
   <p class="sub">Ta clé personnelle est utilisée pour lire tes courses et publier tes séances. Elle est envoyée uniquement à ton serveur TrainSync, sur HTTPS, et n'est jamais enregistrée côté serveur.</p>
   <div class="callout"><strong>Où trouver la clé ?</strong><br>Ouvre intervals.icu → Paramètres (Settings) → Developer Settings → API Key. Copie ta clé ici, jamais dans la conversation ou GitHub.</div>
@@ -289,6 +289,17 @@ async function api(path,options={}){
  if(!res.ok)throw Error(data.error||"Intervals.icu indisponible (HTTP "+res.status+").");
  return data;
 }
+async function refreshWeather(){
+ if(!navigator.geolocation)throw Error("La géolocalisation n'est pas disponible sur cet appareil.");
+ const position=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,
+   {enableHighAccuracy:false,timeout:12000,maximumAge:1800000}));
+ const lat=Math.round(position.coords.latitude*100)/100,lon=Math.round(position.coords.longitude*100)/100;
+ const response=await fetch("/v3/weather?lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon),
+  {cache:"no-store",signal:AbortSignal.timeout(15000)});
+ const data=await response.json();
+ if(!response.ok||!data.ok)throw Error(data.error||"Météo momentanément indisponible.");
+ state.weather=data;draw();
+}
 async function loadLaps(){
  if(!state.connected&&!DEMO){
    state.activitySegments={error:"Connecte ton compte Intervals.icu pour consulter les fractions réelles."};
@@ -322,6 +333,7 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
+ if(action==="weather"){await refreshWeather();return;}
  if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;draw();return;}
  if(action==="day"){state.chosenDay=value;draw();return;}
  if(action==="week"){state.week=Math.max(0,Math.min(state.plan.totalWeeks-1,state.week+Number(value)));draw();return;}
