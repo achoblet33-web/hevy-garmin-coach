@@ -5,6 +5,7 @@ import { join, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import demoWorker from "./worker.js";
 import liveWorker from "./live-worker.mjs";
+import {hevyFetch} from "./hevy-relay.mjs";
 const root=resolve(fileURLToPath(new URL("../web/", import.meta.url)));
 const mime={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",
  ".css":"text/css; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",
@@ -20,6 +21,13 @@ const app=createServer(async(req,res)=>{
   res.setHeader("Cache-Control","no-store");
   if(u.pathname==="/health"){res.writeHead(200,{"Content-Type":"application/json"});return res.end(JSON.stringify({ok:true,mode:"active-capable",keyStoredOnServer:false}));}
   if(u.pathname==="/") {res.writeHead(302,{Location:"/runna-next/index.html"+(u.searchParams.get("demo")==="1"?"?demo=1":"")});return res.end();}
+  if(u.pathname==="/v3/hevy/workouts"){
+    if(req.method!=="GET"){res.writeHead(405);return res.end();}
+    const upstream=await hevyFetch(new Request("https://kintra.local/v3/hevy/workouts",{
+      headers:{"x-hevy-api-key":req.headers["x-hevy-api-key"]||""}}));
+    res.writeHead(upstream.status,Object.fromEntries(upstream.headers));
+    return res.end(Buffer.from(await upstream.arrayBuffer()));
+  }
   if(u.pathname==="/v3/weather"){
     if(req.method!=="GET"){res.writeHead(405);return res.end();}
     const lat=Number(u.searchParams.get("lat")),lon=Number(u.searchParams.get("lon"));
