@@ -1,11 +1,13 @@
 // TrainSync Coach standalone PWA. Cache only static public assets; never cache any workout API or health data.
-const CACHE = "trainsync-coach-ui-3";
+const CACHE = "trainsync-coach-ui-4";
 const STATIC = [
   "./index.html",
   "./app.css?v=3",
-  "./app.mjs?v=3",
+  "./app.mjs?v=4",
   "./manifest.webmanifest",
   "./credentials.mjs",
+  "./after-run.mjs",
+  "./workout-reconciliation.mjs",
   "../plan-engine.mjs"
 ];
 self.addEventListener("install",event=>{
