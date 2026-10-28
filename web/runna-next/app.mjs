@@ -97,8 +97,10 @@ function planView(){
 function activitiesView(){
  const stats=statData();
  const runlist=state.activities.filter(x=>x.category==="Course").slice(0,25);
+ const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
- return `<h2 class="pageTitle">Progression</h2><p class="sub">Tes courses et tes résultats, au même endroit.</p>
+ return `<h2 class="pageTitle">Progression</h2><p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
+ <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
  <div class="card"><div class="between"><h3 class="heading">Les 28 derniers jours</h3><span class="pill muted">${state.sourceMode==="demo"?"Données fictives":"Intervals.icu"}</span></div>
  <div class="statrow"><div class="stat"><strong>${km(stats.km)}</strong><small>Kilomètres</small></div><div class="stat"><strong>${stats.sessions}</strong><small>Courses</small></div><div class="stat"><strong>${km(stats.sessions?stats.km/stats.sessions:0)}</strong><small>Moyenne km</small></div></div>
  <div class="line"></div><strong>Volume par séance</strong><div class="metrics" style="margin-top:12px">
@@ -279,7 +281,7 @@ async function api(path,options={}){
  return data;
 }
 async function loadLaps(){
- if(!state.connected){
+ if(!state.connected&&!DEMO){
    state.activitySegments={error:"Connecte ton compte Intervals.icu pour consulter les fractions réelles."};
    draw();return;
  }
@@ -297,6 +299,7 @@ async function sync(){
   state.strength=Array.isArray(data.strength)?data.strength:[];
   state.wellness=Array.isArray(data.wellness)?data.wellness:[];
   state.planned=Array.isArray(data.planned)?data.planned:[];
+  state.syncedAt=data.syncedAt||new Date().toISOString();
   state.sourceMode=data.demo?"demo":data.ok?"intervals":"partial";
   state.syncNote=(data.warnings||[]).join(" · ");
   draw();
