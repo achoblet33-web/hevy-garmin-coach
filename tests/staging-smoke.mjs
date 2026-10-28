@@ -18,7 +18,7 @@ const health=await (await check("/health")).json();
 assert.equal(health.mode,"synthetic-staging");
 console.log("OK: stage health");
 const html=await (await check("/")).text();
-assert.match(html,/runna-next\/app\.mjs/);
+assert.match(html,/\.\/app\.mjs\?v=1/);
 const app=await (await check("/runna-next/app.mjs?v=1")).text();
 const css=await (await check("/runna-next/app.css?v=1")).text();
 assert.match(app,/renderWizard/);
