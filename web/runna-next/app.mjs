@@ -1,5 +1,6 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
+import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -16,7 +17,7 @@ const emoji={easy:"🏃",long:"↗",interval:"⚡",tempo:"◈",race:"🏁",rest:
 const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
-let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",watchSuccess:null};
+let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -104,6 +105,7 @@ function activitiesView(){
  ${runlist.slice(0,8).reverse().map(x=>`<div class="bar"><span>${fmt(String(x.startedAt).slice(0,10)).split(" ")[0]}</span><div class="track"><b style="width:${Math.round((Number(x.distanceKm||0)/long)*100)}%"></b></div><small>${km(x.distanceKm)} km</small></div>`).join("")||`<p class="sub">Synchronise tes courses pour voir la progression.</p>`}</div></div>
  <div class="sectionTitle"><h2>Historique</h2><button class="textButton" data-action="connect">Connecter mes données</button></div>
  ${runlist.map(x=>`<div class="training"><span class="strip"></span><span style="flex:1"><small>${fmt(String(x.startedAt).slice(0,10))}</small><strong>${e(x.title)}</strong><small>${km(x.distanceKm)} km · ${x.durationMinutes??"—"} min · FC ${x.averageHeartRate??"—"}</small></span></div>`).join("")||`<div class="card empty"><strong>Ton historique t'attend</strong>Les activités de ton Apple Watch peuvent remonter via Intervals.icu Companion.</div>`}
+ ${renderTrainingReview(state.activities,state.planned||[])}
  <div class="card"><div class="heading">Analyses avancées</div><p class="sub">Les comparaisons répétition par répétition et les estimations chronométriques nécessitent les tours, les zones et des courses réelles. Aucun score de performance fictif n'est affiché.</p></div>`;
 }
 function libraryView(){
@@ -180,7 +182,11 @@ function renderWizard(){
 function timeFor(m){const total=Math.round(m*60),h=Math.floor(total/3600),min=Math.floor(total/60%60),s=total%60;return h+":"+String(min).padStart(2,"0")+":"+String(s).padStart(2,"0")}
 function normalPage(){
  let content=state.tab==="today"?todayView():state.tab==="plan"?planView():state.tab==="activities"?activitiesView():state.tab==="library"?libraryView():profileView();
- if(state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
+ if(state.activityFocus){const a=state.activities.find(x=>String(x.externalId||x.id?.replace(/^intervals:/,""))===state.activityFocus);
+   content=renderActivityReport({activity:a,planned:state.planned,plan:state.plan,segments:state.activitySegments,
+     loading:state.activityLoading,feedback:state.feedback["activity:"+state.activityFocus]});
+ }
+ if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
  }
  return `<div class="app"><header class="top"><div><small>TrainSync · Coach</small><h1>${state.selected?"Ma séance":state.tab==="today"?"Bonjour 👋":state.tab==="plan"?"Mon entraînement":state.tab==="activities"?"Mes résultats":state.tab==="library"?"Courir":"Paramètres"}</h1></div>
@@ -239,6 +245,11 @@ function sheet(){
  ${state.watchPreview?`<div class="callout"><strong>Structure à publier</strong><pre style="white-space:pre-wrap;font-size:12px;line-height:1.5">${e(state.watchPreview.description)}</pre>
  ${state.connected?"Publication réelle possible après confirmation.":DEMO?"Mode démonstration : publication simulée.":"Pour publier réellement, connecte Intervals.icu depuis Profil → Mes connexions."}</div>
  <div class="actions"><button class="btn full" data-action="publishWatch">${state.connected?"Confirmer et publier":"Simuler l'envoi"}</button></div>`:""}`;
+ if(sh==="activityFeedback")body=`<h2>Ton ressenti après la course</h2>
+ <p class="sub">Combien était difficile cette séance ? Ta note est personnelle et n'ajuste pas le programme sans ton accord.</p>
+ <label>Effort ressenti (1 = facile, 10 = maximal)<select id="runRpe">${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${i+1===5?"selected":""}>${i+1} / 10</option>`).join("")}</select></label>
+ <label style="margin-top:12px">Commentaire facultatif<input id="runNote" maxlength="220" placeholder="Récupération, chaleur, douleurs, sensations…"></label>
+ <div class="actions"><button class="btn full" data-action="saveActivityFeedback">Enregistrer mon ressenti</button></div>`;
  if(sh==="history")body=`<h2>Versions du programme</h2><p class="sub">Chaque remplacement peut être annulé à partir de la version précédente enregistrée.</p>
  ${state.versionHistory.length?state.versionHistory.slice().reverse().map((p,i)=>`<button class="training" data-action="restore:${state.versionHistory.length-1-i}"><span class="strip"></span><span><strong>${km(p.profile.distanceKm)} km · ${fmt(p.profile.raceDate)}</strong><small>${p.totalWeeks} semaines · Restaurer cette version</small></span></button>`).join(""):`<div class="empty">Aucune ancienne version.</div>`}`;
  if(sh==="instant")body=`<h2>Entraînement instantané</h2><p class="sub">Sélectionne un type de séance. Elle ne modifie pas automatiquement le programme.</p>
@@ -267,6 +278,17 @@ async function api(path,options={}){
  if(!res.ok)throw Error(data.error||"Intervals.icu indisponible (HTTP "+res.status+").");
  return data;
 }
+async function loadLaps(){
+ if(!state.connected){
+   state.activitySegments={error:"Connecte ton compte Intervals.icu pour consulter les fractions réelles."};
+   draw();return;
+ }
+ const id=state.activityFocus;if(!/^[A-Za-z0-9_-]{1,80}$/.test(String(id||"")))return;
+ state.activityLoading=true;draw();
+ try{state.activitySegments=await api("/activities/"+encodeURIComponent(id)+"/intervals");}
+ catch(error){state.activitySegments={error:error.message||"Fractions indisponibles."};}
+ finally{state.activityLoading=false;draw();}
+}
 async function sync(){
  if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=[];state.sourceMode="disconnected";draw();return;}
  try{
@@ -288,10 +310,26 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
- if(action==="tab"){state.tab=value;state.selected=null;draw();return;}
+ if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;draw();return;}
  if(action==="day"){state.chosenDay=value;draw();return;}
  if(action==="week"){state.week=Math.max(0,Math.min(state.plan.totalWeeks-1,state.week+Number(value)));draw();return;}
  if(action==="session"){state.selected=value;draw();return;}
+ if(action==="activity"){
+   if(!/^[A-Za-z0-9_-]{1,80}$/.test(value))throw Error("Identifiant d'activité incorrect.");
+   if(!state.activities.some(a=>String(a.externalId||a.id?.replace(/^intervals:/,""))===value))throw Error("Activité introuvable dans ton compte.");
+   state.activityFocus=value;state.activitySegments=null;state.tab="activities";draw();
+   await loadLaps();return;
+ }
+ if(action==="backActivity"){state.activityFocus=null;state.activitySegments=null;draw();return;}
+ if(action==="loadLaps"){await loadLaps();return;}
+ if(action==="activityFeedback"){state.sheet="activityFeedback";draw();return;}
+ if(action==="saveActivityFeedback"){
+   if(!state.activityFocus)throw Error("Aucune activité sélectionnée.");
+   const rpe=Number($("runRpe")?.value);
+   if(!Number.isInteger(rpe)||rpe<1||rpe>10)throw Error("Note RPE invalide.");
+   state.feedback["activity:"+state.activityFocus]={rpe,comment:($("runNote")?.value||"").slice(0,220),at:new Date().toISOString()};
+   persist();state.sheet=null;draw();alertText("Ressenti enregistré. Le plan reste inchangé.");return;
+ }
  if(action==="back"){state.selected=null;draw();return;}
  if(action==="setup"){state.form={...state.plan?.profile,...(state.plan?{}:sample())};state.step=0;state.wizard=true;state.sheet=null;draw();return;}
  if(action==="distance"){state.form.distanceKm=Number(value);draw();return;}
@@ -371,7 +409,7 @@ async function perform(action,value){
  }
  if(action==="disconnect"){
   state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode=DEMO?"demo":"disconnected";
-  state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.sheet=null;
+  state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
   localStorage.removeItem(KEY_VAULT);draw();if(DEMO)await sync();return;
  }
  }catch(error){const msg=error?.message||"Action impossible";if(state.wizard&&$("wizardError")){$("wizardError").hidden=false;$("wizardError").textContent=msg;}else alertText(msg);}
