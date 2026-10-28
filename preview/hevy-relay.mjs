@@ -9,18 +9,22 @@ export async function hevyFetch(request){
  try{
   // Fetch up to 60 recent workouts (six pages) to cover a typical 90-day training view.
   // All reads are sequential, bounded, and do not save the key or full response server-side.
-  const workouts=[];let pageCount=1;
-  for(let page=1;page<=Math.min(6,pageCount);page++){
-   const r=await fetch("https://api.hevyapp.com/v1/workouts?page="+page+"&pageSize=10",{
-    method:"GET",headers:{"api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(12000)});
-   if(!r.ok)return response({error:r.status===401||r.status===403?
-     "Hevy a refusé ta clé API. Vérifie ton compte Pro et Developer Settings.":"Hevy momentanément indisponible."},
-     r.status===401||r.status===403?401:502);
-   const parsed=await r.json();pageCount=Math.min(999,Math.max(1,Number(parsed?.page_count)||1));
-   const items=Array.isArray(parsed?.workouts)?parsed.workouts:[];
-   workouts.push(...items);
-   if(items.length===0)break;
+  const getPage=async page=>{
+    const r=await fetch("https://api.hevyapp.com/v1/workouts?page="+page+"&pageSize=10",{
+      method:"GET",headers:{"api-key":key,Accept:"application/json"},signal:AbortSignal.timeout(12500)});
+    if(!r.ok)throw Object.assign(new Error(r.status===401||r.status===403?
+      "Hevy a refusé ta clé API. Vérifie ton compte Pro et Developer Settings.":"Hevy momentanément indisponible."),{status:r.status===401||r.status===403?401:502});
+    return r.json();
+  };
+  const first=await getPage(1),pageCount=Math.max(1,Math.min(999,Number(first?.page_count)||1));
+  const remaining=Array.from({length:Math.min(6,pageCount)-1},(_,i)=>i+2);
+  const pages=[first];
+  // Two parallel API reads at a time, max 6 pages. Avoid slow serial loading on iPhone.
+  for(let i=0;i<remaining.length;i+=2){
+    const pair=await Promise.all(remaining.slice(i,i+2).map(page=>getPage(page)));
+    pages.push(...pair);
   }
+  const workouts=pages.flatMap(p=>Array.isArray(p?.workouts)?p.workouts:[]);
   const normalized=workouts.slice(0,60).map(x=>({
    id:"hevy:"+String(x.id||""),source:"Hevy",category:"Musculation",
    title:String(x.title||"Séance Hevy").slice(0,150),startedAt:x.start_time||x.created_at||null,
@@ -35,5 +39,5 @@ export async function hevyFetch(request){
    })):[]
   })).filter(x=>x.startedAt);
   return response({ok:true,source:"Hevy Pro",strength:normalized,pageCount,partialHistory:pageCount>6,workoutCount:normalized.length});
- }catch{return response({error:"Connexion Hevy momentanément indisponible."},503);}
+ }catch(error){return response({error:error?.message||"Connexion Hevy momentanément indisponible."},Number(error?.status)||503);}
 }
