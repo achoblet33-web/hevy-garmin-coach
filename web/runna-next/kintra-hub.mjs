@@ -71,3 +71,20 @@ export function renderKintraProgressSummary({state,date}){
  </div>
  <p class="sub">CTL / ATL : mesures Intervals.icu lorsqu'elles sont fournies; aucune estimation inventée.</p>`;
 }
+
+export function renderKintraStrengthSummary({state,date}){
+ const workouts=Array.isArray(state.hevySessions)&&state.hevySessions.length?
+   state.hevySessions:Array.isArray(state.strength)?state.strength:[];
+ const week=workouts.filter(x=>String(x.startedAt||"").slice(0,10)>=dateAdd(date,-6)&&String(x.startedAt||"").slice(0,10)<=date);
+ const sets=week.reduce((sum,x)=>sum+(x.exercises||[]).reduce((n,z)=>n+(z.sets?.length||0),0),0);
+ const last=[...workouts].sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt)))[0];
+ return `<article class="card kintra-strength-review">
+   <div class="between"><div><span class="eyebrow">MUSCULATION</span><h3 class="heading">Mon renforcement</h3></div>
+   <button class="textButton" data-action="hevy">${state.hevyKey?"Hevy Pro ✓":"Connecter Hevy ›"}</button></div>
+   <div class="kintra-strength-grid"><div><strong>${week.length}</strong><small>séances sur 7 jours</small></div>
+   <div><strong>${state.hevyKey?sets:"—"}</strong><small>séries importées</small></div></div>
+   ${last?`<p class="sub">Dernière séance visible : <strong>${safe(last.title||"Musculation")}</strong> · ${safe(String(last.startedAt).slice(0,10))}</p>`:
+   `<p class="sub">Connecte Hevy Pro pour retrouver tes séances. Aucune charge d'entraînement n'est inventée.</p>`}
+   ${state.hevyKey?`<p class="sub">Synchronisation en lecture seule. Historique limité aux 60 séances les plus récentes.</p>`:""}
+ </article>`;
+}
