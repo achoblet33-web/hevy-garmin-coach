@@ -153,7 +153,7 @@ function detailView(x){
 }
 function renderWizard(){
  const f=state.form,s=state.step;
- const texts=[["Quel est ton objectif ?","Choisis la distance et la date de ton prochain défi."],["Où en es-tu aujourd'hui ?","Ton programme part de ton niveau actuel, pas de ton chrono rêvé."],["Quand peux-tu courir ?","Le calendrier s'organise autour de tes disponibilités."],["Ton programme est prêt","Vérifie-le avant de l'adopter."]];
+ const texts=[["Quel est ton objectif ?","Événement ou maintien : ton entraînement s'adapte à ta vie."],["Où en es-tu aujourd'hui ?","Ton programme part de ton niveau actuel, pas de ton chrono rêvé."],["Quand peux-tu courir ?","Le calendrier s'organise autour de tes disponibilités."],["Ton programme est prêt","Vérifie-le avant de l'adopter."]];
  let body="";
  if(s===0)body=`<div class="choice">${[[5,"5 km"],[10,"10 km"],[21.0975,"Semi-marathon"],[42.195,"Marathon"]].map(([n,l])=>`<button class="${f.distanceKm===n?"active":""}" data-action="distance:${n}"><span style="font-size:23px">🏁</span>${l}</button>`).join("")}</div>
  <div class="formGrid" style="margin-top:16px"><label>Date de course<input id="raceDate" type="date" min="${add(today(),21)}" max="${add(today(),365)}" value="${e(f.raceDate)}"></label>
@@ -168,6 +168,20 @@ function renderWizard(){
  if(s===3)body=`<div class="statrow"><div class="stat"><strong>${km(f.distanceKm)}</strong><small>Objectif km</small></div><div class="stat"><strong>${f.weeklyKm}</strong><small>Km actuels/sem.</small></div><div class="stat"><strong>${f.frequency}</strong><small>Sorties/sem.</small></div></div>
  <div class="callout" style="margin-top:15px">Course du ${full(f.raceDate)}. Le plan comprend endurance, sorties longues, entraînements de qualité adaptés, assimilation et affûtage.</div>
  <p class="sub">Tu pourras modifier ton objectif, déplacer des séances et réorganiser le plan avec un aperçu avant validation.</p>`;
+
+ if(s===0)body=`<div class="kintra-mode-picker">
+ <button class="${f.mode!=="maintenance"?"active":""}" data-action="goalMode:event"><span>◎</span><strong>Objectif événement</strong><small>Préparer une course</small></button>
+ <button class="${f.mode==="maintenance"?"active":""}" data-action="goalMode:maintenance"><span>↗</span><strong>Mode maintien</strong><small>Entretenir ma forme</small></button></div>
+ ${f.mode==="maintenance"?`<p class="sub" style="margin-top:15px">Cycle de quatre semaines, sans compétition ni affûtage artificiel.</p>
+ <div class="choice">${[["balance","Équilibre"],["endurance","Endurance"],["speed","Vitesse modérée"]].map(([x,t])=>
+ `<button class="${(f.maintenanceFocus||"balance")===x?"active":""}" data-action="focus:${x}">${t}</button>`).join("")}</div>`:
+ `<div class="choice" style="margin-top:15px">${[[5,"5 km"],[10,"10 km"],[21.0975,"Semi-marathon"],[42.195,"Marathon"]].map(([x,t])=>
+ `<button class="${Number(f.distanceKm)===x?"active":""}" data-action="distance:${x}">🏁 ${t}</button>`).join("")}</div>
+ <div class="formGrid" style="margin-top:16px"><label>Date de course<input id="raceDate" type="date" min="${add(today(),21)}" max="${add(today(),365)}" value="${e(f.raceDate||add(today(),84))}"></label>
+ <label>Chrono souhaité (facultatif)<input id="raceTime" placeholder="0:50:00" value="${f.targetTimeMinutes?timeFor(f.targetTimeMinutes):""}"></label></div>`}`;
+ if(s===3&&f.mode==="maintenance")body=`<div class="statrow"><div class="stat"><strong>Maintien</strong><small>Mode</small></div>
+ <div class="stat"><strong>${f.weeklyKm}</strong><small>Km hebdomadaires</small></div><div class="stat"><strong>${f.frequency}</strong><small>Sorties / semaine</small></div></div>
+ <div class="callout" style="margin-top:15px">Quatre semaines d'entretien à renouveler après une revue de tes résultats et de ta récupération.</div>`;
  return `<div class="top"><button class="circle" data-action="wizardBack">‹</button><div class="eyebrow">Programme personnalisé · ${s+1}/4</div><span style="width:40px"></span></div>
  <div class="content"><div class="stepper">${[0,1,2,3].map(i=>`<span class="${i<=s?"active":""}"></span>`).join("")}</div>
  <h2 class="pageTitle">${texts[s][0]}</h2><p class="sub">${texts[s][1]}</p><div class="card">${body}</div>
