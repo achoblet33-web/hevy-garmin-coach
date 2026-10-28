@@ -118,12 +118,26 @@ function profileView(){
  <div class="card"><div class="row"><div class="iconTile">◎</div><div><strong>TrainSync Coach</strong><p class="sub">${p?km(p.distanceKm)+" km · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="setup">${p?"Créer un autre programme":"Définir mon objectif"}</button></div></div>
  <div class="card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
- <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Preview Cloudflare connecté":"À connecter pour les activités réelles"}</p></div></div>
- <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">Contextualisation de la fatigue musculaire</p></div></div>
+ <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
+ <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">Intégration complémentaire à connecter ultérieurement</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="connect">Gérer les connexions</button></div></div>
+ `{state.watchSuccess?`<div class="card">
+ <div class="eyebrow">Séance préparée pour l'Apple Watch</div>
+ <h3 class="heading">`{state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
+ <p class="sub">`{e(state.watchSuccess.message||"")}</p>
+ `{state.watchSuccess.real?`<div class="callout">
+ <strong>Sur ton iPhone :</strong><br>
+ 1. Ouvre Intervals.icu et vérifie les étapes de la séance.<br>
+ 2. Ouvre <strong>Intervals.icu Companion</strong> → More → Workout Settings.<br>
+ 3. Active <strong>Automatically Sync Planned Workouts to Apple Watch</strong> et synchronise.<br>
+ 4. Sur l'Ultra 3, ouvre <strong>Exercice</strong> et retrouve la séance programmée.<br>
+ 5. Après la course, autorise Apple Santé → Intervals.icu via Companion.
+ </div>
+ <div class="actions"><button class="btn secondary" data-action="refreshData">Actualiser mes activités</button></div>`:""}
+ </div>`:""}
  <div class="card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
  <p class="sub">Tes programmes et préférences sont enregistrés localement sur cet appareil. Les séances publiées doivent être vérifiées dans Intervals.icu.</p></div>
- <div class="card"><div class="heading">À propos de cette version</div><p class="sub">Interface de développement inspirée des principaux parcours d'applications de coaching running, conçue indépendamment. Pas d'enregistrement direct HealthKit dans cette PWA.</p><div class="warning">${state.sourceMode==="demo"?"Démonstration : activités, sommeil et musculation fictifs. Aucune séance Apple Watch réelle n'est créée.":"Mode réel : confirme chaque publication avant d'envoyer sur ton calendrier Intervals.icu."}</div></div>`;
+ <div class="card"><div class="heading">À propos de cette version</div><p class="sub">Interface de développement inspirée des principaux parcours d'applications de coaching running, conçue indépendamment. Pas d'enregistrement direct HealthKit dans cette PWA.</p><div class="warning">${DEMO?"Démonstration : données fictives. Aucune séance envoyée à la montre.":state.connected?"Mode actif : tes courses sont lues depuis Intervals.icu, confirme chaque publication.":"Mode actif non connecté : ouvre Mes connexions pour utiliser ton vrai compte."}</div></div>`;
 }
 function detailView(x){
  const steps=workoutDescription(x);
@@ -171,7 +185,7 @@ function normalPage(){
  }
  return `<div class="app"><header class="top"><div><small>TrainSync · Coach</small><h1>${state.selected?"Ma séance":state.tab==="today"?"Bonjour 👋":state.tab==="plan"?"Mon entraînement":state.tab==="activities"?"Mes résultats":state.tab==="library"?"Courir":"Paramètres"}</h1></div>
  <button class="circle" data-action="tab:profile" aria-label="Mon profil">◎</button></header>
- <main class="content">${state.sourceMode==="demo"?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre.</div>`:""}${content}</main></div>
+ <main class="content">${DEMO?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre. <button class="textButton" data-action="goLive">Ouvrir la version active</button></div>`:!state.connected?`<div class="callout">Mode actif · Connecte ton compte Intervals.icu pour synchroniser les courses et envoyer des séances à l’Apple Watch. <button class="textButton" data-action="connect">Connecter maintenant ›</button></div>`:""}${content}</main></div>
  <nav class="nav" aria-label="Navigation principale">${[["today","☀","Aujourd'hui"],["plan","▦","Plan"],["activities","▥","Activités"],["profile","◎","Profil"]].map(([id,icon,name])=>`<button data-action="tab:${id}" class="${state.tab===id?"active":""}"><span class="symbol">${icon}</span>${name}</button>`).join("")}</nav>`;
 }
 function sheet(){
@@ -223,7 +237,7 @@ function sheet(){
  <label>Répétitions<input id="watchReps" type="number" value="6" min="3" max="12"></label></div>
  <div class="actions"><button class="btn full" data-action="previewWatch">Vérifier le fractionné</button></div>
  ${state.watchPreview?`<div class="callout"><strong>Structure à publier</strong><pre style="white-space:pre-wrap;font-size:12px;line-height:1.5">${e(state.watchPreview.description)}</pre>
- ${state.connected?"Publication réelle possible après confirmation.":"Mode démo : publication simulée, connexion Preview nécessaire pour créer une séance réelle."}</div>
+ ${state.connected?"Publication réelle possible après confirmation.":DEMO?"Mode démonstration : publication simulée.":"Pour publier réellement, connecte Intervals.icu depuis Profil → Mes connexions."}</div>
  <div class="actions"><button class="btn full" data-action="publishWatch">${state.connected?"Confirmer et publier":"Simuler l'envoi"}</button></div>`:""}`;
  if(sh==="history")body=`<h2>Versions du programme</h2><p class="sub">Chaque remplacement peut être annulé à partir de la version précédente enregistrée.</p>
  ${state.versionHistory.length?state.versionHistory.slice().reverse().map((p,i)=>`<button class="training" data-action="restore:${state.versionHistory.length-1-i}"><span class="strip"></span><span><strong>${km(p.profile.distanceKm)} km · ${fmt(p.profile.raceDate)}</strong><small>${p.totalWeeks} semaines · Restaurer cette version</small></span></button>`).join(""):`<div class="empty">Aucune ancienne version.</div>`}`;
@@ -245,7 +259,7 @@ function wizardValues(){
 async function api(path,options={}){
  const isDemo=DEMO&&!state.connected;
  const url="/v3"+path+(isDemo?(path.includes("?")?"&":"?")+"demo=1":"");
- if(!isDemo&&!state.connected)throw Error("Connecte d'abord ton compte Intervals.icu depuis Profil.");
+ if(!isDemo&&!state.connected && !path.startsWith("/workouts/preview"))throw Error("Connecte d'abord ton compte Intervals.icu depuis Profil.");
  const res=await fetch(url,{...options,
   headers:{...(options.body?{"Content-Type":"application/json"}:{}),...(!isDemo?{"x-intervals-api-key":state.apiToken}:{})},
   cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(25000)});
@@ -334,6 +348,7 @@ async function perform(action,value){
   alertText(d.message||"Envoi traité.");return;
  }
  if(action==="goLive"){location.href="/runna-next/index.html";return;}
+ if(action==="refreshData"){await sync();alertText("Synchronisation demandée.");return;}
  if(action==="connectNow"){
   if(DEMO)throw Error("Ouvre la version active avant de connecter Intervals.icu.");
   const key=$("apiToken").value.trim(),pass=$("apiVaultPass").value;
