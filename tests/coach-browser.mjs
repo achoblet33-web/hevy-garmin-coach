@@ -74,10 +74,24 @@ try{
  assert.match(await page.locator("#app").innerText(),/COACH · MODE MAINTIEN/);
  assert.doesNotMatch(await page.locator("#app").innerText(),/jours restants/);
  console.log("PASS: four-week maintenance plan has no fictional race.");
+ await page.locator(".nav button[data-action='tab:plan']").click();
+ await page.locator('button[data-action="toggleAdvice"]').click();
+ assert.match(await page.locator("#app").innerText(),/Conseils contextuels désactivés/);
+ await page.locator('button[data-action="toggleAdvice"]').click();
+ assert.match(await page.locator("#app").innerText(),/Conseils contextuels activés/);
+ await page.screenshot({path:"test-artifacts/kintra-coach-mobile.png",fullPage:true});
+ console.log("PASS: adaptive guidance switch is explicit and reversible.");
  await page.locator(".nav button[data-action='tab:activities']").click();
  assert.match(await page.locator("#app").innerText(),/Progression/);
  assert.match(await page.locator("#app").innerText(),/Données fictives/);
  console.log("PASS: Analytics honestly labelled demo.");
+ await page.locator('button[data-action="progressTab:splits"]').click();
+ assert.match(await page.locator("#app").innerText(),/Analyse des fractions/);
+ await page.locator('button[data-action="progressTab:hr"]').click();
+ assert.match(await page.locator("#app").innerText(),/Fréquence cardiaque moyenne/);
+ await page.locator('button[data-action="progressTab:summary"]').click();
+ await page.screenshot({path:"test-artifacts/kintra-progression-mobile.png",fullPage:true});
+ console.log("PASS: summary, real splits and heart-rate views.");
  await page.locator('button[data-action^="activity:"]').first().click();
  await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
@@ -113,6 +127,20 @@ try{
  await active.locator("#apiToken").waitFor();
  await active.locator("#apiVaultPass").waitFor();
  console.log("PASS: active mode is clean, requires real API key and offers encrypted vault.");
+ await active.locator('button[data-action="close"]').click();
+ await active.route("**/v3/hevy/workouts",route=>route.fulfill({
+  status:200,contentType:"application/json",body:JSON.stringify({ok:true,source:"Hevy Pro",strength:[
+   {id:"hevy:test-1",source:"Hevy",category:"Musculation",title:"Jambes",startedAt:new Date().toISOString(),exercises:[
+    {title:"Back Squat",sets:[{reps:6,weightKg:90,rpe:8}]}]}]})}));
+ await active.locator('button[data-action="hevy"]').click();
+ await active.locator("#hevyToken").fill("00000000-0000-4000-8000-000000000001");
+ await active.locator('button[data-action="hevyConnect"]').click();
+ await active.locator('.modal').waitFor({state:"hidden",timeout:8000});
+ assert.match(await active.locator("#app").innerText(),/Hevy Pro connecté/);
+ await active.locator('.nav button[data-action="tab:today"]').click();
+ assert.match(await active.locator("#app").innerText(),/Renforcement/);
+ await active.screenshot({path:"test-artifacts/kintra-hevy-accueil-mobile.png",fullPage:true});
+ console.log("PASS: Hevy Pro personal API integration works without Intervals connected (mocked API only).");
  await active.close();
  assert.deepEqual(errors,[],"No uncaught browser errors");
  console.log("PASS: no uncaught browser errors.");
