@@ -42,3 +42,13 @@ jobs:
         run: |
           npx --yes wrangler@latest deploy --dry-run --config Backend/wrangler.jsonc
           npx --yes wrangler@latest deploy --dry-run --config preview/wrangler.jsonc
+  smoke-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify isolated Railway staging (fake data only)
+        run: node tests/staging-smoke.mjs
