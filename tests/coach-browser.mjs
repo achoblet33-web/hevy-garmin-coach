@@ -33,6 +33,31 @@ try{
  assert.match(await page.title(),/KINTRA/);
 
  await mkdir("test-artifacts",{recursive:true});
+ await page.locator('[data-testid="readiness"]').waitFor();
+ await page.locator('[data-testid="sleep-card"]').waitFor();
+ await page.locator('[data-testid="weekly-training-tiles"]').waitFor();
+ await page.locator('[data-testid="weather-card"]').waitFor();
+ assert.match(await page.locator("#app").innerText(),/PRÊT À PERFORMER/);
+ assert.match(await page.locator("#app").innerText(),/SOMMEIL & RÉCUPÉRATION/);
+ await page.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
+  body:JSON.stringify({ok:true,results:[{label:"Le Lamentin, Martinique, France",latitude:14.61,longitude:-60.99}]})}));
+ await page.route("**/v3/weather?*",route=>{
+  const epoch=Math.floor(Date.now()/3600000)*3600;
+  const hours=Array.from({length:24},(_,i)=>epoch+3600*i);
+  return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,
+    temperature:28,apparent:31,humidity:75,wind:9,timezone:"America/Martinique",
+    hourly:{time:hours,temperature_2m:hours.map(()=>28),apparent_temperature:hours.map((_,i)=>i===7?26:32),
+      relative_humidity_2m:hours.map(()=>70),precipitation_probability:hours.map(()=>10),
+      wind_speed_10m:hours.map(()=>9),uv_index:hours.map(()=>2)}})});
+ });
+ await page.locator('button[data-action="weatherLocation"]').first().click();
+ await page.locator("#weatherCity").fill("Le Lamentin");
+ await page.locator('button[data-action="weatherSearch"]').click();
+ await page.locator('button[data-action="weatherChoose:0"]').click();
+ await page.getByText(/MÉTÉO POUR COURIR · 12 H/).waitFor({timeout:12000});
+ assert.match(await page.locator("#app").innerText(),/Le Lamentin/);
+ assert.match(await page.locator("#app").innerText(),/Créneau indicativement plus confortable/);
+ console.log("PASS: separate readiness, sleep, workout, training counts and selectable city with 12h forecast.");
  await page.screenshot({path:"test-artifacts/kintra-accueil-mobile.png",fullPage:true});
  console.log("PASS: Runna-like Today entry with 10km demo goal.");
  await page.locator(".nav button[data-action='tab:plan']").click();
