@@ -1,5 +1,5 @@
 // KINTRA tiny GPS map: renders recorded route; OSM tiles load only after user asks.
-const num=v=>Number.isFinite(Number(v))?Number(v):null;
+const num=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const valid=x=>Array.isArray(x)&&x.length===2&&num(x[0])!==null&&num(x[1])!==null&&Math.abs(num(x[0]))<=90&&Math.abs(num(x[1]))<=180;
 const escape=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const merc=(lat,lon,z)=>{const scale=256*2**z,phi=Math.min(85,Math.max(-85,lat))*Math.PI/180;
