@@ -104,6 +104,8 @@ jobs:
         run: node tests/kintra-v3-browser.mjs
       - name: Audit iPhone viewport in WebKit Safari-like engine (mock data only)
         run: node tests/kintra-mobile-webkit.mjs
+      - name: Review all four KINTRA visual tabs at iPhone widths without API keys
+        run: node tests/kintra-reference-ui-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
