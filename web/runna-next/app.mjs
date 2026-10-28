@@ -8,6 +8,7 @@ import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
 import {createPortableBackup,parsePortableBackup,MAX_BACKUP_BYTES} from "./local-backup.mjs";
+import {encryptPortableBackup,decryptPortableBackup,isEncryptedBackup,MAX_ENCRYPTED_BYTES} from "./secure-backup.mjs";
 import {uniqueRunningActivities,findPotentialDuplicates} from "./workout-reconciliation.mjs";
 import {routeToGpx} from "./gpx-export.mjs";
 const STORAGE="trainsync-next-running-v1";
@@ -27,11 +28,19 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,pairedRuns:{},linkCandidate:null};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,backupEncryptedText:null,backupReadyText:null,pairedRuns:{},linkCandidate:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;state.pairedRuns=saved.pairedRuns&&typeof saved.pairedRuns==="object"?saved.pairedRuns:{};}catch{}}
-function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{}}
+function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{throw Error("Impossible de sauvegarder sur cet appareil (stockage saturé ou indisponible). Exporte une sauvegarde chiffrée puis libère de l’espace.");}}
 function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today(),pairedRuns:state.pairedRuns});}
-function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
+function toastHtml(text){return `<div id="kintra-toast" role="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:100;background:#335246;color:#fff;border-radius:14px;padding:14px;max-width:95%;width:max-content">${e(text)}</div>`}
+function alertText(text){
+ state.toast=text;
+ const node=document.getElementById("kintra-toast");
+ if(node)node.textContent=text;
+ else $("app")?.insertAdjacentHTML("beforeend",toastHtml(text));
+ // Do not redraw the app on toast dismissal: redrawing clears form input focus and values.
+ setTimeout(()=>{if(state.toast===text){state.toast="";document.getElementById("kintra-toast")?.remove()}},5000);
+}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
  return {runs,km:runs.reduce((a,x)=>a+Number(x.distanceKm||0),0),sessions:runs.length};}
@@ -195,9 +204,10 @@ function profileView(){
  <div class="card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
  <p class="sub">Tes programmes et préférences sont enregistrés localement sur cet appareil. Les séances publiées doivent être vérifiées dans Intervals.icu.</p></div>
  <div class="card" data-testid="kintra-backup-settings"><div class="heading">Sauvegarde & restauration</div>
- <p class="sub">Sauvegarde tes programmes, anciennes versions et ressentis pour les transférer sur un autre appareil. Le fichier JSON n'est pas chiffré : conserve-le dans un endroit privé. Aucune clé API, trace GPS ou donnée de santé n'est incluse.</p>
- <div class="actions"><button class="btn secondary" data-action="backupExport">Exporter ma sauvegarde</button>
- <button class="btn secondary" data-action="backupRestore">Restaurer un fichier</button></div></div>
+ <p class="sub">Transfère tes programmes, anciennes versions et ressentis avec une sauvegarde chiffrée protégée par une phrase secrète personnelle. Aucune clé API, trace GPS ou mesure de santé n'est incluse. L'ancien format JSON non chiffré reste disponible pour compatibilité.</p>
+ <div class="actions"><button class="btn" data-action="backupSecure">Sauvegarde chiffrée</button>
+ <button class="btn secondary" data-action="backupRestore">Restaurer un fichier</button></div>
+ <button class="textButton" data-action="backupExport">Exporter un JSON non chiffré (ancien format)</button></div>
  <div class="card"><div class="heading">À propos de cette version</div><p class="sub">Interface de développement inspirée des principaux parcours d'applications de coaching running, conçue indépendamment. Pas d'enregistrement direct HealthKit dans cette PWA.</p><div class="warning">${DEMO?"Démonstration : données fictives. Aucune séance envoyée à la montre.":state.connected?"Mode actif : tes courses sont lues depuis Intervals.icu, confirme chaque publication.":"Mode actif non connecté : ouvre Mes connexions pour utiliser ton vrai compte."}</div></div>`;
 }
 function detailView(x){
@@ -295,8 +305,23 @@ function sheet(){
  <p class="warning">La date seule ne confirme pas le lien. Vérifie que c'est bien la même séance. L'association est locale, révocable et ne modifie pas Intervals.icu.</p>
  <div class="actions"><button class="btn full" data-action="coachLinkAccept">Oui, c'est la même séance</button>
  <button class="btn secondary" data-action="coachLinkReject">Non, conserver séparées</button></div>`;
+ if(sh==="backupSecure")body=`<h2>Sauvegarde chiffrée KINTRA</h2>
+ <p class="sub">Le fichier sera chiffré sur ton appareil avant téléchargement. Choisis une phrase secrète que tu conserveras toi-même : elle ne peut pas être récupérée par KINTRA.</p>
+ <div class="formGrid"><label>Phrase secrète (12 caractères minimum)<input id="kintraSecurePass" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label>
+ <label>Confirmer la phrase secrète<input id="kintraSecurePassAgain" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label></div>
+ <div class="actions"><button class="btn full" data-action="backupSecureDownload">Chiffrer et enregistrer</button>
+ <button class="btn secondary" data-action="close">Annuler</button></div>`;
+ if(sh==="backupSecureReady")body=`<h2>Fichier chiffré préparé</h2>
+ <p class="sub">Le chiffrement est terminé sur ton appareil. Appuie maintenant sur Télécharger pour enregistrer le fichier. N'oublie pas ta phrase secrète : elle n'est pas conservée par KINTRA.</p>
+ <div class="actions"><button class="btn full" data-action="backupSecureSave">Télécharger ma sauvegarde</button>
+ <button class="btn secondary" data-action="close">Annuler</button></div>`;
+ if(sh==="backupUnlock")body=`<h2>Déverrouiller la sauvegarde</h2>
+ <p class="sub">Ce fichier est chiffré. Sa phrase secrète sert uniquement à le déchiffrer dans ce navigateur. Aucun transfert réseau.</p>
+ <label>Phrase secrète de sauvegarde<input id="kintraBackupUnlockPass" type="password" autocomplete="off"></label>
+ <div class="actions"><button class="btn full" data-action="backupUnlock">Déchiffrer et vérifier</button>
+ <button class="btn secondary" data-action="backupCancel">Annuler</button></div>`;
  if(sh==="backupRestore")body=`<h2>Restaurer tes données locales</h2>
- <p class="sub">Choisis une sauvegarde JSON créée par KINTRA. Tu pourras la vérifier avant d'écraser les plans et ressentis de cet appareil. Les clés API restent inchangées.</p>
+ <p class="sub">Choisis une sauvegarde JSON créée par KINTRA, chiffrée ou ancienne non chiffrée. Le remplacement sera soumis à confirmation. Les connexions et clés API restent inchangées.</p>
  <label>Fichier de sauvegarde<input id="kintraBackupFile" type="file" accept=".json,application/json"></label>
  <div class="actions"><button class="btn full" data-action="backupInspect">Vérifier la sauvegarde</button>
  <button class="btn secondary" data-action="close">Annuler</button></div>`;
@@ -378,7 +403,7 @@ function sheet(){
  <div class="choice">${["easy","interval","tempo","long"].map(k=>`<button data-action="instantType:${k}"><span>${emoji[k]}</span>${labels[k]}</button>`).join("")}</div>`;
  return `<div class="modalShade"><section class="modal" role="dialog" aria-modal="true" aria-label="${e(sh)}">${close}${body}</section></div>`;
 }
-function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?`<div role="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:100;background:#335246;color:#fff;border-radius:14px;padding:14px;max-width:95%;width:max-content">${e(state.toast)}</div>`:"");}
+function draw(){const a=$("app");if(!a)return;a.innerHTML=(state.step>=0&&state.wizard?`<div class="app">${renderWizard()}</div>`:normalPage())+(state.sheet?sheet():"")+(state.toast?toastHtml(state.toast):"");}
 function wizardValues(){
  const f=state.form;
  if(state.step===0&&f.mode!=="maintenance"){f.raceDate=$("raceDate").value;const t=$("raceTime").value.trim();
@@ -429,7 +454,7 @@ async function selectWeatherGPS(){
 async function syncHevy(){
  if(!state.hevyKey)return;
  const res=await fetch("/v3/hevy/workouts",{headers:{"x-hevy-api-key":state.hevyKey},
-  cache:"no-store",signal:AbortSignal.timeout(16000)});
+  cache:"no-store",signal:AbortSignal.timeout(60000)});
  const data=await res.json();
  if(!res.ok||!data.ok)throw Error(data.error||"Hevy indisponible.");
  state.hevySessions=Array.isArray(data.strength)?data.strength:[];
@@ -477,6 +502,28 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
+ if(action==="backupSecure"){state.sheet="backupSecure";draw();return;}
+ if(action==="backupSecureDownload"){
+  const password=$("kintraSecurePass")?.value||"";
+  if(password!==($("kintraSecurePassAgain")?.value||""))throw Error("Les deux phrases secrètes sont différentes.");
+  const ciphertext=await encryptPortableBackup({plan:state.plan,history:state.versionHistory,
+   feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,pairedRuns:state.pairedRuns},password);
+  state.backupReadyText=ciphertext;state.sheet="backupSecureReady";draw();return;
+ }
+ if(action==="backupSecureSave"){
+  if(!state.backupReadyText)throw Error("Aucune sauvegarde chiffrée prête à télécharger.");
+  // User gesture remains active: important for Safari/iOS after costly PBKDF2 encryption.
+  const url=URL.createObjectURL(new Blob([state.backupReadyText],{type:"application/json;charset=utf-8"}));
+  const a=document.createElement("a");a.href=url;a.download="KINTRA-sauvegarde-chiffree-"+today()+".json";
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  state.backupReadyText=null;state.sheet=null;draw();
+  alertText("Sauvegarde chiffrée téléchargée. Conserve ta phrase secrète séparément.");return;
+ }
+ if(action==="backupUnlock"){
+  if(!state.backupEncryptedText)throw Error("Aucun fichier chiffré à restaurer.");
+  state.backupCandidate=await decryptPortableBackup(state.backupEncryptedText,$("kintraBackupUnlockPass")?.value||"");
+  state.backupEncryptedText=null;state.sheet="backupConfirm";draw();return;
+ }
  if(action==="backupExport"){
   const value=createPortableBackup({plan:state.plan,history:state.versionHistory,feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,pairedRuns:state.pairedRuns});
   const blob=new Blob([value],{type:"application/json;charset=utf-8"});
@@ -484,14 +531,19 @@ async function perform(action,value){
   a.href=url;a.download="KINTRA-sauvegarde-"+today()+".json";document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);alertText("Fichier de sauvegarde créé. Conserve-le dans un endroit privé.");return;
  }
- if(action==="backupRestore"){state.backupCandidate=null;state.sheet="backupRestore";draw();return;}
+ if(action==="backupRestore"){state.backupCandidate=null;state.backupEncryptedText=null;state.sheet="backupRestore";draw();return;}
  if(action==="backupInspect"){
   const file=$("kintraBackupFile")?.files?.[0];
   if(!file)throw Error("Sélectionne d'abord un fichier JSON de sauvegarde.");
-  if(file.size>MAX_BACKUP_BYTES)throw Error("Le fichier est trop volumineux.");
-  state.backupCandidate=parsePortableBackup(await file.text());state.sheet="backupConfirm";draw();return;
+  if(file.size>MAX_ENCRYPTED_BYTES)throw Error("Le fichier est trop volumineux.");
+  const content=await file.text();
+  if(isEncryptedBackup(content)){
+   state.backupEncryptedText=content;state.backupCandidate=null;state.sheet="backupUnlock";draw();return;
+  }
+  if(file.size>MAX_BACKUP_BYTES)throw Error("Ancienne sauvegarde non chiffrée trop volumineuse.");
+  state.backupCandidate=parsePortableBackup(content);state.sheet="backupConfirm";draw();return;
  }
- if(action==="backupCancel"){state.backupCandidate=null;state.sheet=null;draw();return;}
+ if(action==="backupCancel"){state.backupCandidate=null;state.backupEncryptedText=null;state.sheet=null;draw();return;}
  if(action==="backupApply"){
   const backup=state.backupCandidate;
   if(!backup)throw Error("Aucune sauvegarde vérifiée.");
@@ -645,7 +697,7 @@ async function perform(action,value){
   state.plan=state.draft;state.draft=null;state.week=0;state.chosenDay=today();state.sheet=null;state.tab="today";persist();draw();return;
  }
  if(action==="manage"||action==="adjust"||action==="history"||action==="connect"||action==="instant"){state.sheet=action;draw();return;}
- if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;state.linkCandidate=null;draw();return;}
+ if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;state.backupEncryptedText=null;state.backupReadyText=null;state.linkCandidate=null;draw();return;}
  if(action==="calendar"){state.sheet=null;state.tab="plan";state.week=0;draw();return;}
  if(action==="status"){patchStatus(value);return;}
  if(action==="move"||action==="feedback"){state.sheet=action;draw();return;}

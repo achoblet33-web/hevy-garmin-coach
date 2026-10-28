@@ -19,9 +19,13 @@ export function normalizeStreams(raw){
  const metric=(type,mapper=x=>x)=>{
   const v=get(type)?.data||[];
   if(!Array.isArray(v)||!v.length)return {min:null,max:null,average:null};
-  const arr=v.map(n).filter(x=>x!==null);if(!arr.length)return {min:null,max:null,average:null};
-  const avg=arr.reduce((a,b)=>a+b,0)/arr.length;
-  return {min:mapper(Math.min(...arr)),max:mapper(Math.max(...arr)),average:mapper(avg)};
+  // Streaming aggregation: 100k+ sensor points must not overflow the JS call stack.
+  let min=Infinity,max=-Infinity,sum=0,count=0;
+  for(const sample of v){
+   const value=n(sample);if(value===null)continue;
+   if(value<min)min=value;if(value>max)max=value;sum+=value;count++;
+  }
+  return count?{min:mapper(min),max:mapper(max),average:mapper(sum/count)}:{min:null,max:null,average:null};
  };
  return {points,hasGps:points.length>=2,count:points.length,sourcePoints:Array.isArray(lats)?lats.length:0,
    altitude:metric("altitude",x=>Math.round(x)),speed:metric("velocity_smooth",x=>+(x*3.6).toFixed(1)),

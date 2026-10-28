@@ -1,9 +1,9 @@
 // KINTRA standalone PWA. Cache only static public assets; never cache any workout API or health data.
-const CACHE = "kintra-ui-15";
+const CACHE = "kintra-ui-16";
 const STATIC = [
   "./index.html",
-  "./app.css?v=15",
-  "./app.mjs?v=15",
+  "./app.css?v=16",
+  "./app.mjs?v=16",
   "./manifest.webmanifest",
   "./kintra-icon.svg",
   "./kintra-icon-192.png",
@@ -12,6 +12,7 @@ const STATIC = [
   "./kintra-coach.mjs",
   "./kintra-coach-v2.mjs",
   "./local-backup.mjs",
+  "./secure-backup.mjs",
   "./gpx-export.mjs",
   "./kintra-hub.mjs",
   "./kintra-weather.mjs",

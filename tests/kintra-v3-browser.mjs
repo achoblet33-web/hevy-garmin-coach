@@ -79,6 +79,39 @@ try{
  assert.equal(saved.plan.sessions[0].title,"Programme restauré");
  assert.equal(saved.pairedRuns["local-easy"],"intervals:abc");
  assert.equal(saved.feedback["activity:abc"].rpe,6);
+ await page.locator('.nav button[data-action="tab:profile"]').click();
+ await page.locator('button[data-action="backupSecure"]').click();
+ await page.locator("#kintraSecurePass").fill("phrase-longue-kintra-test-2026");
+ await page.locator("#kintraSecurePassAgain").fill("phrase-longue-kintra-test-2026");
+ // A previous success toast must not clear this passphrase when its 5-second timer expires.
+ await page.waitForTimeout(5200);
+ assert.equal(await page.locator("#kintraSecurePass").inputValue(),"phrase-longue-kintra-test-2026");
+ assert.equal(await page.locator("#kintraSecurePassAgain").inputValue(),"phrase-longue-kintra-test-2026");
+ await page.locator('button[data-action="backupSecureDownload"]').click();
+ await page.getByText("Fichier chiffré préparé").waitFor({timeout:25000});
+ const encryptedDownloadPromise=page.waitForEvent("download");
+ await page.locator('button[data-action="backupSecureSave"]').click();
+ const encryptedDownload=await encryptedDownloadPromise;
+ assert.match(encryptedDownload.suggestedFilename(),/sauvegarde-chiffree.*json/);
+ const encryptedJson=await readFile(await encryptedDownload.path(),"utf8");
+ assert.match(encryptedJson,/kintra-encrypted-backup-v1/);
+ assert.ok(!encryptedJson.includes("Programme restauré"));
+ const beforeRestore=JSON.parse(await page.evaluate(()=>localStorage.getItem("trainsync-next-running-v1")));
+ await page.locator('button[data-action="backupRestore"]').click();
+ await page.locator("#kintraBackupFile").setInputFiles({
+  name:"KINTRA-chiffree.json",mimeType:"application/json",buffer:Buffer.from(encryptedJson)});
+ await page.locator('button[data-action="backupInspect"]').click();
+ await page.getByText("Déverrouiller la sauvegarde").waitFor();
+ await page.locator("#kintraBackupUnlockPass").fill("une-mauvaise-phrase-tres-longue");
+ await page.locator('button[data-action="backupUnlock"]').click();
+ await page.getByText(/Phrase secrète incorrecte|sauvegarde chiffrée endommagée/).waitFor();
+ assert.deepEqual(JSON.parse(await page.evaluate(()=>localStorage.getItem("trainsync-next-running-v1"))),beforeRestore);
+ await page.locator("#kintraBackupUnlockPass").fill("phrase-longue-kintra-test-2026");
+ await page.locator('button[data-action="backupUnlock"]').click();
+ await page.getByText("Confirmer la restauration").waitFor();
+ await page.screenshot({path:"test-artifacts/kintra-rc-encrypted-restore-iphone-320.png",fullPage:true});
+ await page.locator('button[data-action="backupCancel"]').click();
+ assert.deepEqual(JSON.parse(await page.evaluate(()=>localStorage.getItem("trainsync-next-running-v1"))),beforeRestore);
  assert.deepEqual(errors,[]);
- console.log("PASS: manual link confirmation and undo; duplicate warning; portable backup export/restore; 320px iPhone");
+ console.log("PASS: manual link confirmation and undo; duplicate warning; portable backup export/restore; 320px iPhone; encrypted backup, reject wrong passphrase, cancel restore");
 }finally{if(browser)await browser.close();worker.kill("SIGTERM");}

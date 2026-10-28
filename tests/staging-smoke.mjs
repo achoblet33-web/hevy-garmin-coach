@@ -19,7 +19,7 @@ assert.equal(health.mode,"active-capable");
 assert.equal(health.keyStoredOnServer,false);
 console.log("OK: stage health");
 const html=await (await check("/?demo=1")).text();
-assert.match(html,/\.\/app\.mjs\?v=(13|14|15)/);
+assert.match(html,/\.\/app\.mjs\?v=(13|14|15|16)/);
 const stageVersion=Number(html.match(/app\.mjs\?v=(\d+)/)?.[1]||0);
 const appResponse=await check("/runna-next/app.mjs?v="+stageVersion);
 assert.match(appResponse.headers.get("content-type")||"",/javascript/i,"ES module must have correct MIME");
@@ -77,6 +77,11 @@ if(stageVersion>=14){
  assert.match(coachV2,/buildCoachReview/);
  assert.match(app,/renderCoachReview/);
 }
+if(stageVersion>=16){
+ const secure=await (await check("/runna-next/secure-backup.mjs")).text();
+ assert.match(secure,/AES-GCM/);
+ assert.match(app,/backupSecureDownload/);
+}
 if(stageVersion>=15){
  const backup=await (await check("/runna-next/local-backup.mjs")).text();
  const gpx=await (await check("/runna-next/gpx-export.mjs")).text();
@@ -101,7 +106,7 @@ assert.match(css,/--accent-strong:#b5163c/);
 assert.match(html,/#faf8f9/);
 assert.match(html,/KINTRA/);
 const active=await (await check("/")).text();
-assert.match(active,/app\.mjs\?v=(13|14|15)/);
+assert.match(active,/app\.mjs\?v=(13|14|15|16)/);
 const vault=await (await check("/runna-next/credentials.mjs")).text();
 assert.match(vault,/AES-GCM/);
 console.log("OK: main URL serves live-ready app with encrypted client vault");

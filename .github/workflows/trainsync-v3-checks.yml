@@ -39,6 +39,7 @@ jobs:
           node --check web/runna-next/kintra-coach.mjs
           node --check web/runna-next/kintra-coach-v2.mjs
           node --check web/runna-next/local-backup.mjs
+          node --check web/runna-next/secure-backup.mjs
           node --check web/runna-next/gpx-export.mjs
           node --check web/runna-next/kintra-hub.mjs
           node --check web/runna-next/kintra-weather.mjs
@@ -94,13 +95,15 @@ jobs:
       - name: Install browser test runtime (test job only)
         run: |
           npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
       - name: Exercise the actual mobile coach via staging HTTPS
         run: node tests/coach-browser.mjs
       - name: Verify Coach 2.0 locally with mock data at iPhone widths (NO KEYS)
         run: node tests/coach-v2-browser.mjs
       - name: Verify KINTRA 3.0 reliability, backups and manual matching on iPhone without keys
         run: node tests/kintra-v3-browser.mjs
+      - name: Audit iPhone viewport in WebKit Safari-like engine (mock data only)
+        run: node tests/kintra-mobile-webkit.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

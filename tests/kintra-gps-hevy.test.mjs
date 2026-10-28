@@ -48,3 +48,17 @@ test("malicious workout and exercise descriptions are escaped",()=>{
  const html=renderHevyWorkoutDetail({title:"<img src=x onerror=alert(1)>",exercises:[{title:"<svg onload=1>",sets:[]} ]});
  assert.ok(!html.includes("<img"));assert.ok(!html.includes("<svg"));assert.match(html,/&lt;img/);
 });
+
+test("long Apple Watch GPS activity handles 180k sensor samples without RangeError or missing source statistics",()=>{
+ const lat=Array.from({length:180000},(_,i)=>14.4+i*0.0000005);
+ const lon=lat.map((_,i)=>-61+i*0.0000003);
+ const heart=Array.from({length:180000},(_,i)=>140+(i%40));
+ const data=normalizeStreams([{type:"latlng",data:lat,data2:lon},{type:"heartrate",data:heart},
+  {type:"altitude",data:Array.from({length:180000},(_,i)=>100+(i%15))}]);
+ assert.ok(data.points.length<=422);
+ assert.equal(data.hasGps,true);
+ assert.equal(data.sourcePoints,180000);
+ assert.equal(data.heartRate.min,140);
+ assert.equal(data.heartRate.max,179);
+ assert.equal(data.altitude.max,114);
+});
