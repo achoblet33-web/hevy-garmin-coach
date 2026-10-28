@@ -23,7 +23,7 @@ export function reconcileWorkouts(activities=[],planned=[]){
  for(const p of planned||[]){
   const eventId=validId(p.id);
   const exact=runs.filter(a=>validId(a.pairedEventId)===eventId||
-   (p.pairedActivityId!=null&&validId(a.id)===validId(p.pairedActivityId)));
+   (p.pairedActivityId!=null&&(validId(a.externalId)===validId(p.pairedActivityId)||validId(a.id)===validId(p.pairedActivityId))));
   const actual=exact.length===1?exact[0]:null;
   if(actual){
    consumed.add(validId(actual.id));
