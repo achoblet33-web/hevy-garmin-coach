@@ -48,6 +48,8 @@ export function renderRouteMap(points,enabled=false){
  </div>
  <div class="kintra-map-actions">
  <p class="sub">${enabled?"Fond de carte OSM · parcours réellement enregistré.":"Le tracé GPS est local. Le fond cartographique OSM n’est chargé qu’avec ton accord."}</p>
- <button class="btn secondary" data-action="mapTiles">${enabled?"Masquer le fond de carte":"Afficher le fond de carte"}</button></div>
+ <button class="btn secondary" data-action="mapTiles">${enabled?"Masquer le fond de carte":"Afficher le fond de carte"}</button>
+ <button class="btn secondary" data-action="exportGpx">Exporter mon tracé GPX</button></div>
+ <small class="sub">Export local des points GPS affichés (trace éventuellement simplifiée). Les coordonnées révèlent ton parcours : conserve le fichier de manière privée.</small>
  </section>`;
 }
