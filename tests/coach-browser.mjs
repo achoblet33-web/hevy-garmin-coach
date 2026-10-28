@@ -61,6 +61,7 @@ try{
  assert.ok(geometryBefore.inputFont>=16,"iOS city input font must prevent automatic focus zoom");
  await page.locator("#weatherCity").fill("Le Lamentin");
  await page.locator('button[data-action="weatherSearch"]').click();
+ await page.locator(".kintra-place-results strong").waitFor({state:"visible",timeout:10000});
  await page.evaluate(()=>{document.querySelector(".kintra-place-results strong").textContent=
   "Une très longue commune avec un nom sans espaces EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";});
  const geometryAfter=await page.evaluate(()=>{
@@ -87,6 +88,7 @@ try{
  await narrow.locator('button[data-action="weatherLocation"]').first().click();
  await narrow.locator("#weatherCity").fill("Ville");
  await narrow.locator('button[data-action="weatherSearch"]').click();
+ await narrow.locator(".kintra-place-results strong").waitFor({state:"visible",timeout:10000});
  const mobileBounds=await narrow.evaluate(()=>({
    width:innerWidth,scroll:document.documentElement.scrollWidth,
    modal:document.querySelector(".modal").getBoundingClientRect().width,
