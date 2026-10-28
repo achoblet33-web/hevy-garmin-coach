@@ -14,7 +14,7 @@ try{
  const visual=await page.evaluate(()=>{
   const root=getComputedStyle(document.documentElement);
   const primaryButton=document.createElement("button");primaryButton.className="btn";document.body.appendChild(primaryButton);
-  const primary=getComputedStyle(primaryButton).backgroundColor;primaryButton.remove();
+  const primary=getComputedStyle(primaryButton).backgroundImage;primaryButton.remove();
   const hero=getComputedStyle(document.querySelector(".hero")).backgroundImage;
   const theme=document.querySelector('meta[name="theme-color"]').getAttribute("content");
   const bar=document.querySelector(".training .strip");
@@ -24,23 +24,25 @@ try{
    primary,hero,theme,sessionColor:bar?getComputedStyle(bar).backgroundColor:null};
  });
  assert.deepEqual([visual.accent,visual.strong,visual.background,visual.theme],
-  ["#ff7c89","#cd2f47","#100c12","#100c12"]);
- assert.match(visual.primary,/205,\s*47,\s*71/);
+  ["#a9163a","#b5163c","#faf8f9","#faf8f9"]);
+ assert.match(visual.primary,/linear-gradient/);
  assert.ok(visual.hero.includes("linear-gradient"),"Burgundy hero gradient expected");
  assert.ok(visual.sessionColor?.startsWith("rgb("),"Colored workout strip expected");
- console.log("PASS: red/burgundy brand and meaningful coral training colors.",visual);
+ console.log("PASS: KINTRA premium crimson / light brand, logo and workout colors.",visual);
+ assert.ok(await page.locator(".kintra-header-logo").count());
+ assert.match(await page.title(),/KINTRA/);
 
  await mkdir("test-artifacts",{recursive:true});
- await page.screenshot({path:"test-artifacts/coach-rouge-accueil-mobile.png",fullPage:true});
+ await page.screenshot({path:"test-artifacts/kintra-accueil-mobile.png",fullPage:true});
  console.log("PASS: Runna-like Today entry with 10km demo goal.");
  await page.locator(".nav button[data-action='tab:plan']").click();
  await page.locator(".training[data-action^='session:']").first().waitFor();
  assert.match(await page.locator("#app").innerText(),/Les séances de la semaine/);
- await page.screenshot({path:"test-artifacts/coach-rouge-programme-mobile.png",fullPage:true});
+ await page.screenshot({path:"test-artifacts/kintra-programme-mobile.png",fullPage:true});
  console.log("PASS: Week plan and session rows.");
  await page.locator(".training[data-action^='session:']").first().click();
  assert.match(await page.locator("#app").innerText(),/Détail de la séance/);
- await page.screenshot({path:"test-artifacts/coach-rouge-fiche-seance-mobile.png",fullPage:true});
+ await page.screenshot({path:"test-artifacts/kintra-seance-mobile.png",fullPage:true});
  await page.locator("button[data-action='back']").click();
  console.log("PASS: Session details and return.");
  await page.locator(".nav button[data-action='tab:profile']").click();
@@ -58,6 +60,20 @@ try{
  await page.locator("button[data-action='acceptPlan']").click();
  assert.match(await page.locator("#app").innerText(),/Objectif 5 km/);
  console.log("PASS: Four-step onboarding, plan preview and explicit adoption.");
+ await page.locator(".nav button[data-action='tab:profile']").click();
+ await page.locator("button[data-action='setup']").click();
+ await page.locator("button[data-action='goalMode:maintenance']").click();
+ assert.match(await page.locator("#app").innerText(),/Mode maintien/);
+ await page.locator("button[data-action='wizardNext']").click();
+ await page.locator("button[data-action='wizardNext']").click();
+ await page.locator("button[data-action='wizardNext']").click();
+ assert.match(await page.locator("#app").innerText(),/Quatre semaines d'entretien/);
+ await page.locator("button[data-action='wizardNext']").click();
+ assert.match(await page.locator(".modal").innerText(),/Maintien/);
+ await page.locator("button[data-action='acceptPlan']").click();
+ assert.match(await page.locator("#app").innerText(),/COACH · MODE MAINTIEN/);
+ assert.doesNotMatch(await page.locator("#app").innerText(),/jours restants/);
+ console.log("PASS: four-week maintenance plan has no fictional race.");
  await page.locator(".nav button[data-action='tab:activities']").click();
  assert.match(await page.locator("#app").innerText(),/Progression/);
  assert.match(await page.locator("#app").innerText(),/Données fictives/);
