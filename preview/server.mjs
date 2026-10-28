@@ -15,7 +15,7 @@ const app=createServer(async(req,res)=>{
   res.setHeader("X-Content-Type-Options","nosniff");
   res.setHeader("Cache-Control","no-store");
   if(u.pathname==="/health"){res.writeHead(200,{"Content-Type":"application/json"});return res.end(JSON.stringify({ok:true,mode:"synthetic-staging"}));}
-  if(u.pathname==="/" && u.searchParams.get("demo")!=="1") {res.writeHead(302,{Location:"/?demo=1"});return res.end();}
+  if(u.pathname==="/") {res.writeHead(302,{Location:"/runna-next/index.html?demo=1"});return res.end();}
   if(u.pathname.startsWith("/v3/")) {
     try {
       const pieces=[];for await(const part of req)pieces.push(part);
