@@ -32,6 +32,8 @@ jobs:
       - name: Syntax checks
         run: |
           node --check web/trainsync-v3.js
+          node --check web/plan-engine.mjs
+          node --check web/runna-style-plan.mjs
           node --check Backend/worker-v30.js
           node --check Backend/running-workouts.mjs
           node --check preview/worker.js
