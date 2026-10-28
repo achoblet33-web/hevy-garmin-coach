@@ -6,6 +6,7 @@ import {renderRaceSummary,formatTime} from "./kintra-presenter.mjs";
 import {renderHevyWorkouts,renderHevyWorkoutDetail} from "./kintra-hevy.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
+import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -23,9 +24,10 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
+function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today()});}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
@@ -102,6 +104,7 @@ function planView(){
  <article class="kintra-coach-tip"><div class="between"><div><div class="eyebrow">COACH ADAPTATIF</div><strong>${state.adaptiveSuggestions?"Conseils contextuels activés":"Conseils contextuels désactivés"}</strong></div>
  <button class="kintra-toggle ${state.adaptiveSuggestions?"on":""}" data-action="toggleAdvice" role="switch" aria-checked="${state.adaptiveSuggestions}" aria-label="Activer les conseils adaptatifs"><span></span></button></div>
  <p class="sub">Analyse les informations disponibles et suggère de conserver, alléger ou reporter une séance. Le plan ne change jamais sans ton accord.</p></article>
+ ${renderCoachReview(coachReview(),state.adaptiveSuggestions)}
  <div class="card"><div class="between"><span class="eyebrow">Semaine de course</span><button class="textButton" data-action="manage">Gérer mon plan</button></div>
  <div class="weekNav"><button data-action="week:-1">‹</button><div style="text-align:center"><strong>Semaine ${idx+1} / ${p.totalWeeks}</strong><small>${e(w.phase)} · ${w.plannedKm} km</small></div><button data-action="week:1">›</button></div>
  <div class="progress"><span style="width:${Math.round(done/Math.max(1,sessions.length)*100)}%"></span></div><p class="sub">${done} / ${sessions.length} séances déclarées réalisées</p></div>
@@ -275,6 +278,7 @@ function sheet(){
  <div class="formGrid"><label>Motif<select id="adaptKind"><option value="recovery">Fatigue / reprise</option><option value="holiday">Vacances / indisponibilité</option></select></label>
  <label>Adaptation<select id="adaptMode"><option value="easy">Uniquement facile</option><option value="off">Pause complète</option></select></label><label>Du<input id="adaptFrom" type="date" value="${today()}"></label><label>Au<input id="adaptTo" type="date" value="${add(today(),6)}"></label></div>
  <div class="actions"><button class="btn full" data-action="previewAdapt">Prévisualiser l'adaptation</button></div>`;
+ if(sh==="coachProposal")body=renderCoachProposalPreview(state.coachPreview,state.coachProposal?.reason||"");
  if(sh==="preview")body=`<h2>Vérifier le nouveau plan</h2><p class="sub">${state.draft.totalWeeks} semaines · ${state.draft.mode==="maintenance"?"Maintien":state.draft.profile.distanceKm+" km"} · ${state.draft.profile.frequency} séances/semaine</p>
  <div class="statrow"><div class="stat"><strong>${state.draft.summary[0]?.plannedKm??0}</strong><small>Semaine 1</small></div><div class="stat"><strong>${state.draft.sessions.length}</strong><small>Créneaux</small></div><div class="stat"><strong>${state.draft.totalWeeks}</strong><small>Semaines</small></div></div>
  ${state.draft.notes.map(n=>`<p class="warning">${e(n)}</p>`).join("")}
@@ -512,6 +516,26 @@ async function perform(action,value){
    state.form={...sample(),...(state.plan?.profile||{}),mode:value==="maintenance"?"maintenance":"event"};
    state.step=0;state.wizard=true;state.selected=null;state.sheet=null;draw();return;
  }
+ if(action==="coachProposal"){
+  if(!state.adaptiveSuggestions)throw Error("Active d'abord les conseils adaptatifs dans Coach.");
+  const i=Number(value),review=coachReview(),proposal=review?.proposals?.[i];
+  if(!Number.isInteger(i)||!proposal)throw Error("Proposition indisponible ou obsolète.");
+  state.coachPreview=previewCoachAdjustment(state.plan,proposal,today());
+  state.coachProposal=proposal;state.sheet="coachProposal";draw();return;
+ }
+ if(action==="coachReject"){
+  state.coachProposal=null;state.coachPreview=null;state.sheet=null;draw();return;
+ }
+ if(action==="coachAccept"){
+  const review=coachReview();
+  const proposal=review?.proposals?.find(p=>p.id===state.coachProposal?.id);
+  if(!state.adaptiveSuggestions||!proposal||!state.coachPreview)throw Error("La proposition a changé. Rouvre son aperçu.");
+  const fresh=previewCoachAdjustment(state.plan,proposal,today());
+  if(!confirm("Confirmer l'allègement de cette séance dans ton plan local ? Aucun envoi vers Intervals.icu ou Hevy."))return;
+  state.versionHistory.push(state.plan);
+  state.plan=fresh.plan;state.coachProposal=null;state.coachPreview=null;
+  state.sheet=null;persist();draw();alertText("Séance allégée avec ton accord. La version précédente reste restaurable.");return;
+ }
  if(action==="toggleAdvice"){state.adaptiveSuggestions=!state.adaptiveSuggestions;persist();draw();return;}
  if(action==="progressTab"){state.progressTab=["summary","splits","hr","hevy"].includes(value)?value:"summary";draw();return;}
  if(action==="goalMode"){state.form.mode=value==="maintenance"?"maintenance":"event";draw();return;}
@@ -527,7 +551,7 @@ async function perform(action,value){
   state.plan=state.draft;state.draft=null;state.week=0;state.chosenDay=today();state.sheet=null;state.tab="today";persist();draw();return;
  }
  if(action==="manage"||action==="adjust"||action==="history"||action==="connect"||action==="instant"){state.sheet=action;draw();return;}
- if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;draw();return;}
+ if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;draw();return;}
  if(action==="calendar"){state.sheet=null;state.tab="plan";state.week=0;draw();return;}
  if(action==="status"){patchStatus(value);return;}
  if(action==="move"||action==="feedback"){state.sheet=action;draw();return;}

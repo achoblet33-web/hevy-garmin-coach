@@ -19,13 +19,14 @@ assert.equal(health.mode,"active-capable");
 assert.equal(health.keyStoredOnServer,false);
 console.log("OK: stage health");
 const html=await (await check("/?demo=1")).text();
-assert.match(html,/\.\/app\.mjs\?v=13/);
-const appResponse=await check("/runna-next/app.mjs?v=13");
+assert.match(html,/\.\/app\.mjs\?v=(13|14)/);
+const stageVersion=Number(html.match(/app\.mjs\?v=(\d+)/)?.[1]||0);
+const appResponse=await check("/runna-next/app.mjs?v="+stageVersion);
 assert.match(appResponse.headers.get("content-type")||"",/javascript/i,"ES module must have correct MIME");
 const engineResponse=await check("/plan-engine.mjs");
 assert.match(engineResponse.headers.get("content-type")||"",/javascript/i,"Planner module must be served as JavaScript");
 const app=await appResponse.text();
-const css=await (await check("/runna-next/app.css?v=13")).text();
+const css=await (await check("/runna-next/app.css?v="+stageVersion)).text();
 assert.match(app,/renderWizard/);
 assert.match(app,/todayView/);
 assert.match(app,/planView/);
@@ -71,6 +72,11 @@ const weatherModule=await (await check("/runna-next/kintra-weather.mjs")).text()
 assert.match(weatherModule,/forecastSlots/);
 const map=await (await check("/runna-next/kintra-map.mjs")).text();
 assert.match(map,/OpenStreetMap contributors/);
+if(stageVersion>=14){
+ const coachV2=await (await check("/runna-next/kintra-coach-v2.mjs")).text();
+ assert.match(coachV2,/buildCoachReview/);
+ assert.match(app,/renderCoachReview/);
+}
 const strength=await (await check("/runna-next/kintra-hevy.mjs")).text();
 assert.match(strength,/renderHevyWorkoutDetail/);
 const presenter=await (await check("/runna-next/kintra-presenter.mjs")).text();
@@ -86,7 +92,7 @@ assert.match(css,/--accent-strong:#b5163c/);
 assert.match(html,/#faf8f9/);
 assert.match(html,/KINTRA/);
 const active=await (await check("/")).text();
-assert.match(active,/app\.mjs\?v=13/);
+assert.match(active,/app\.mjs\?v=(13|14)/);
 const vault=await (await check("/runna-next/credentials.mjs")).text();
 assert.match(vault,/AES-GCM/);
 console.log("OK: main URL serves live-ready app with encrypted client vault");

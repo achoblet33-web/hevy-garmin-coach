@@ -331,3 +331,24 @@ html,body,#app{width:100%;max-width:100%;overflow-x:clip}
 @media(max-width:360px){.kintra-map-card,.kintra-hevy-list,.kintra-hevy-detail{padding:12px}
  .kintra-hevy-sets-head,.kintra-hevy-set-row{font-size:10px}
  .kintra-map-actions button{width:100%}}
+
+
+/* KINTRA Coach 2.0 — small-screen review and explicit confirmation sheet. */
+.kintra-coach-v2{min-width:0;max-width:100%;overflow:hidden}
+.kintra-coach-v2 .heading{margin-top:6px}
+.kintra-coach-v2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.kintra-coach-v2-grid>div{background:#fdf4f6;border:1px solid #f2e1e6;padding:12px 10px;border-radius:13px;min-width:0}
+.kintra-coach-v2-grid small{display:block;font-size:11px;line-height:1.35;color:#7d6370;overflow-wrap:anywhere}
+.kintra-coach-v2-grid strong{display:block;color:#81193c;font-size:19px;line-height:1.3;margin-top:5px;font-variant-numeric:tabular-nums}
+.kintra-coach-v2-matching{font-size:12px;line-height:1.5;color:#65394c;overflow-wrap:anywhere}
+.kintra-coach-v2-signals,.kintra-coach-v2-proposals{padding-top:14px;margin-top:14px;border-top:1px solid #f0e2e8;min-width:0}
+.kintra-coach-v2-signals>strong,.kintra-coach-v2-proposals>strong{display:block;font-size:14px;margin-bottom:8px;color:#512039}
+.kintra-coach-v2-signal{font-size:12px;line-height:1.55;color:#765361;overflow-wrap:anywhere;margin:8px 0}
+.kintra-coach-v2-proposals .btn{white-space:normal;overflow-wrap:anywhere;text-align:center;max-width:100%;min-width:0}
+.kintra-coach-v2-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:15px 0}
+.kintra-coach-v2-comparison>div{padding:12px 10px;background:#f9eef1;border:1px solid #e8cdd7;border-radius:12px;min-width:0}
+.kintra-coach-v2-comparison small,.kintra-coach-v2-comparison strong,.kintra-coach-v2-comparison span{display:block;overflow-wrap:anywhere}
+.kintra-coach-v2-comparison small{color:#95485f;font-size:10px;letter-spacing:.04em}
+.kintra-coach-v2-comparison strong{margin:7px 0;color:#68223c;font-size:15px}
+.kintra-coach-v2-comparison span{font-size:12px;color:#79576a}
+@media(max-width:360px){.kintra-coach-v2-grid strong{font-size:17px}.kintra-coach-v2-comparison{grid-template-columns:minmax(0,1fr)}}
