@@ -19,7 +19,7 @@ assert.equal(health.mode,"active-capable");
 assert.equal(health.keyStoredOnServer,false);
 console.log("OK: stage health");
 const html=await (await check("/?demo=1")).text();
-assert.match(html,/\.\/app\.mjs\?v=2/);
+assert.match(html,/\.\/app\.mjs\?v=3/);
 const appResponse=await check("/runna-next/app.mjs?v=3");
 assert.match(appResponse.headers.get("content-type")||"",/javascript/i,"ES module must have correct MIME");
 const engineResponse=await check("/plan-engine.mjs");
