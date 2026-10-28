@@ -3,6 +3,7 @@ import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
 import {weekTrend} from "./kintra-insights.mjs";
 import {renderRaceSummary,formatTime} from "./kintra-presenter.mjs";
+import {renderHevyWorkouts,renderHevyWorkoutDetail} from "./kintra-hevy.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
@@ -22,7 +23,7 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -140,6 +141,7 @@ function activitiesView(){
  ${weeklyComparison}
  ${renderKintraProgressSummary({state,date:today()})}
  ${renderKintraStrengthSummary({state,date:today()})}
+ ${renderHevyWorkouts(state.hevySessions,!!state.hevyKey,state.hevyPartial)}
  <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
  <div class="card"><div class="between"><h3 class="heading">Les 28 derniers jours</h3><span class="pill muted">${state.sourceMode==="demo"?"Données fictives":"Intervals.icu"}</span></div>
  <div class="statrow"><div class="stat"><strong>${km(stats.km)}</strong><small>Kilomètres</small></div><div class="stat"><strong>${stats.sessions}</strong><small>Courses</small></div><div class="stat"><strong>${km(stats.sessions?stats.km/stats.sessions:0)}</strong><small>Moyenne km</small></div></div>
@@ -244,7 +246,12 @@ function normalPage(){
  let content=state.tab==="today"?todayView():state.tab==="plan"?planView():state.tab==="activities"?activitiesView():state.tab==="library"?libraryView():profileView();
  if(state.activityFocus){const a=state.activities.find(x=>String(x.externalId||x.id?.replace(/^intervals:/,""))===state.activityFocus);
    content=renderActivityReport({activity:a,activities:state.activities,planned:state.planned,plan:state.plan,segments:state.activitySegments,
+     detail:state.activityDetail,mapEnabled:state.mapEnabled,
      loading:state.activityLoading,feedback:state.feedback["activity:"+state.activityFocus]});
+ }
+ if(state.hevyFocus!==null){
+   const workout=state.hevySessions[Number(state.hevyFocus)];
+   content=renderHevyWorkoutDetail(workout);
  }
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
@@ -391,19 +398,25 @@ async function syncHevy(){
  const data=await res.json();
  if(!res.ok||!data.ok)throw Error(data.error||"Hevy indisponible.");
  state.hevySessions=Array.isArray(data.strength)?data.strength:[];
+ state.hevyPartial=!!data.partialHistory;
  state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
  draw();
 }
 async function loadLaps(){
  if(!state.connected&&!DEMO){
-   state.activitySegments={error:"Connecte ton compte Intervals.icu pour consulter les fractions réelles."};
-   draw();return;
+  state.activitySegments={error:"Connecte Intervals.icu pour lire les fractions."};
+  state.activityDetail={ok:false,note:"Compte Intervals.icu non connecté : le parcours GPS ne peut pas être chargé."};draw();return;
  }
  const id=state.activityFocus;if(!/^[A-Za-z0-9_-]{1,80}$/.test(String(id||"")))return;
  state.activityLoading=true;draw();
- try{state.activitySegments=await api("/activities/"+encodeURIComponent(id)+"/intervals");}
- catch(error){state.activitySegments={error:error.message||"Fractions indisponibles."};}
- finally{state.activityLoading=false;draw();}
+ const [splits,gps]=await Promise.allSettled([
+   api("/activities/"+encodeURIComponent(id)+"/intervals"),
+   api("/activities/"+encodeURIComponent(id)+"/detail")
+ ]);
+ if(state.activityFocus!==id)return;
+ state.activitySegments=splits.status==="fulfilled"?splits.value:{error:splits.reason?.message||"Fractions indisponibles."};
+ state.activityDetail=gps.status==="fulfilled"?gps.value:{ok:false,note:gps.reason?.message||"Parcours GPS non disponible."};
+ state.activityLoading=false;draw();
 }
 async function sync(){
  if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=state.hevySessions||[];state.sourceMode="disconnected";draw();return;}
@@ -448,7 +461,7 @@ async function perform(action,value){
   state.sheet=null;draw();alertText("Compte Hevy déverrouillé.");return;
  }
  if(action==="hevyDisconnect"){
-  state.hevyKey=null;state.hevySessions=[];state.strength=state.intervalsStrength;
+  state.hevyKey=null;state.hevySessions=[];state.hevyFocus=null;state.hevyPartial=false;state.strength=state.intervalsStrength;
   localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
  }
  if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];state.weatherQuery="";draw();return;}
@@ -458,17 +471,28 @@ async function perform(action,value){
   const place=state.weatherResults[n];await refreshWeather(place);state.sheet=null;draw();return;
  }
  if(action==="weatherGPS"){await selectWeatherGPS();return;}
- if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;draw();return;}
+ if(action==="tab"){state.tab=value;state.selected=null;state.activityFocus=null;state.activitySegments=null;state.activityDetail=null;state.mapEnabled=false;state.hevyFocus=null;draw();return;}
  if(action==="day"){state.chosenDay=value;draw();return;}
  if(action==="week"){state.week=Math.max(0,Math.min(state.plan.totalWeeks-1,state.week+Number(value)));draw();return;}
  if(action==="session"){state.selected=value;draw();return;}
+ if(action==="hevyWorkout"){
+  const idx=Number(value);
+  if(!Number.isInteger(idx)||idx<0||idx>=state.hevySessions.length)throw Error("Séance Hevy introuvable.");
+  state.hevyFocus=idx;state.activityFocus=null;state.selected=null;state.tab="activities";draw();return;
+ }
+ if(action==="backHevy"){state.hevyFocus=null;state.tab="activities";draw();return;}
+ if(action==="refreshHevy"){await syncHevy();alertText("Séances Hevy synchronisées.");return;}
+ if(action==="mapTiles"){
+  if(!state.activityDetail?.route?.hasGps)throw Error("Aucune trace GPS à afficher.");
+  state.mapEnabled=!state.mapEnabled;draw();return;
+ }
  if(action==="activity"){
    if(!/^[A-Za-z0-9_-]{1,80}$/.test(value))throw Error("Identifiant d'activité incorrect.");
    if(!state.activities.some(a=>String(a.externalId||a.id?.replace(/^intervals:/,""))===value))throw Error("Activité introuvable dans ton compte.");
-   state.activityFocus=value;state.activitySegments=null;state.tab="activities";draw();
+   state.activityFocus=value;state.activitySegments=null;state.activityDetail=null;state.mapEnabled=false;state.hevyFocus=null;state.tab="activities";draw();
    await loadLaps();return;
  }
- if(action==="backActivity"){state.activityFocus=null;state.activitySegments=null;draw();return;}
+ if(action==="backActivity"){state.activityFocus=null;state.activitySegments=null;state.activityDetail=null;state.mapEnabled=false;draw();return;}
  if(action==="loadLaps"){await loadLaps();return;}
  if(action==="activityFeedback"){state.sheet="activityFeedback";draw();return;}
  if(action==="saveActivityFeedback"){
