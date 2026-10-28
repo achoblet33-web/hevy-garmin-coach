@@ -52,3 +52,13 @@ jobs:
           node-version: "22"
       - name: Verify isolated Railway staging (fake data only)
         run: node tests/staging-smoke.mjs
+  production-config-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check public production /health without modifying it
+        run: node tests/production-health-readonly.mjs
