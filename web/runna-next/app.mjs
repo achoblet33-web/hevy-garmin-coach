@@ -2,7 +2,7 @@ import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
-import {renderKintraDashboard,renderKintraProgressSummary} from "./kintra-hub.mjs";
+import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -119,6 +119,7 @@ function activitiesView(){
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
  return `<h2 class="pageTitle">Progression</h2>${tabs}<p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
  ${renderKintraProgressSummary({state,date:today()})}
+ ${renderKintraStrengthSummary({state,date:today()})}
  <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
  <div class="card"><div class="between"><h3 class="heading">Les 28 derniers jours</h3><span class="pill muted">${state.sourceMode==="demo"?"Données fictives":"Intervals.icu"}</span></div>
  <div class="statrow"><div class="stat"><strong>${km(stats.km)}</strong><small>Kilomètres</small></div><div class="stat"><strong>${stats.sessions}</strong><small>Courses</small></div><div class="stat"><strong>${km(stats.sessions?stats.km/stats.sessions:0)}</strong><small>Moyenne km</small></div></div>
