@@ -1,6 +1,7 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
+import {weekTrend} from "./kintra-insights.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
@@ -116,8 +117,16 @@ function activitiesView(){
    ${valid.length?valid.map(x=>`<div class="kintra-hr-row"><span>${e(String(x.startedAt).slice(0,10))}</span><div class="kintra-hr-track"><i style="width:${Math.round(Number(x.averageHeartRate)/max*100)}%"></i></div><strong>${Math.round(Number(x.averageHeartRate))} bpm</strong></div>`).join(""):`<div class="empty">Aucune fréquence cardiaque moyenne disponible sur les courses synchronisées.</div>`}
    </div><div class="card"><h3 class="heading">Interprétation</h3><p class="sub">La fréquence cardiaque varie avec l'intensité, la chaleur et la fatigue. Sans zones et historique fiables, KINTRA ne déduit pas de préparation à partir de cette moyenne seule.</p></div>`;
  }
+ const week=weekTrend(state.activities,today());
+ const weeklyComparison=`<div class="card kintra-trend-card"><div class="eyebrow">TENDANCE · DEUX SEMAINES</div>
+ <h3 class="heading">Évolution de ta course</h3>
+ <div class="statrow"><div class="stat"><strong>${week.currentSessions}</strong><small>Courses / 7 j</small></div>
+ <div class="stat"><strong>${week.currentKm}</strong><small>Km / 7 j</small></div>
+ <div class="stat"><strong>${week.changePct==null?"—":(week.changePct>0?"+":"")+week.changePct+" %"}</strong><small>Variation du volume</small></div></div>
+ <p class="sub">Semaine précédente : ${week.previousKm} km. ${week.changePct==null?"Pas assez de kilomètres précédents pour un pourcentage représentatif.":"Variation observée, pas nécessairement une amélioration de performance."}</p></div>`;
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
  return `<h2 class="pageTitle">Progression</h2>${tabs}<p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
+ ${weeklyComparison}
  ${renderKintraProgressSummary({state,date:today()})}
  ${renderKintraStrengthSummary({state,date:today()})}
  <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
@@ -223,7 +232,7 @@ function timeFor(m){const total=Math.round(m*60),h=Math.floor(total/3600),min=Ma
 function normalPage(){
  let content=state.tab==="today"?todayView():state.tab==="plan"?planView():state.tab==="activities"?activitiesView():state.tab==="library"?libraryView():profileView();
  if(state.activityFocus){const a=state.activities.find(x=>String(x.externalId||x.id?.replace(/^intervals:/,""))===state.activityFocus);
-   content=renderActivityReport({activity:a,planned:state.planned,plan:state.plan,segments:state.activitySegments,
+   content=renderActivityReport({activity:a,activities:state.activities,planned:state.planned,plan:state.plan,segments:state.activitySegments,
      loading:state.activityLoading,feedback:state.feedback["activity:"+state.activityFocus]});
  }
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
