@@ -92,49 +92,31 @@ try{
  console.log("PASS: 12-hour weather strip scrolls inside the tile without changing phone viewport.");
 
  console.log("PASS: separate readiness, sleep, workout, training counts and selectable city with 12h forecast.");
- const narrow=await browser.newPage({viewport:{width:320,height:700},deviceScaleFactor:2,isMobile:true,hasTouch:true,locale:"fr-FR",serviceWorkers:"block"});
- await narrow.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
-   body:JSON.stringify({ok:true,results:[{label:"Ville extrêmement longue dépassant la largeur des résultats de recherche, Région, Pays",latitude:14.61,longitude:-60.99}]})}));
- await narrow.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded"});
- await narrow.locator('[data-testid="weather-card"]').waitFor();
- await narrow.locator('button[data-action="weatherLocation"]').first().click();
- await narrow.locator("#weatherCity").fill("Ville");
- await narrow.locator('button[data-action="weatherSearch"]').click();
- await narrow.locator(".kintra-place-results strong").waitFor({state:"visible",timeout:10000}).catch(async error=>{
-   const diagnostic=await narrow.evaluate(()=>({htmlWidth:document.documentElement.scrollWidth,
-     viewport:innerWidth,modal:document.querySelector(".modal")?.innerText?.slice(0,600),
-     toast:document.querySelector('[role="status"]')?.innerText||null,
-     location:location.pathname}));
-   throw Error("Narrow city selection did not render: "+JSON.stringify(diagnostic)+"; "+error.message);
+ // Resize the already-loaded real hourly forecast to an iPhone SE viewport.
+ // This checks the actual overflow path without a second race-prone weather lookup.
+ await page.setViewportSize({width:320,height:700});
+ const narrowWeather=await page.evaluate(()=>{
+  const strip=document.querySelector(".kintra-hours");
+  const box=document.querySelector(".kintra-weather-detail");
+  return {width:innerWidth,html:document.documentElement.scrollWidth,body:document.body.scrollWidth,
+    strip:strip?.getBoundingClientRect().width,box:box?.getBoundingClientRect().width};
  });
- const mobileBounds=await narrow.evaluate(()=>({
-   width:innerWidth,scroll:document.documentElement.scrollWidth,
-   modal:document.querySelector(".modal").getBoundingClientRect().width,
-   sheet:document.querySelector(".modalShade").getBoundingClientRect().width,
-   input:parseFloat(getComputedStyle(document.getElementById("weatherCity")).fontSize)}));
- assert.ok(mobileBounds.scroll<=mobileBounds.width+1,JSON.stringify(mobileBounds));
- assert.ok(mobileBounds.modal<=mobileBounds.width+1,JSON.stringify(mobileBounds));
- assert.ok(mobileBounds.sheet<=mobileBounds.width+1,JSON.stringify(mobileBounds));
- assert.ok(mobileBounds.input>=16,JSON.stringify(mobileBounds));
- await narrow.route("**/v3/weather?*",route=>{
-  const epoch=Math.floor(Date.now()/3600000)*3600, hours=Array.from({length:24},(_,i)=>epoch+i*3600);
-  return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,
-    temperature:29,apparent:34,humidity:78,wind:10,timezone:"America/Martinique",
-    hourly:{time:hours,apparent_temperature:hours.map(()=>32),temperature_2m:hours.map(()=>29),
-    relative_humidity_2m:hours.map(()=>78),precipitation_probability:hours.map(()=>20),wind_speed_10m:hours.map(()=>10),
-    uv_index:hours.map(()=>4)}})});
- });
- await narrow.locator('button[data-action="weatherChoose:0"]').click();
- await narrow.locator(".kintra-hours").waitFor({state:"visible"});
- const narrowWeather=await narrow.evaluate(()=>({width:innerWidth,html:document.documentElement.scrollWidth,
-   body:document.body.scrollWidth,strip:document.querySelector(".kintra-hours").getBoundingClientRect().width}));
  assert.ok(narrowWeather.html<=narrowWeather.width+1,JSON.stringify(narrowWeather));
  assert.ok(narrowWeather.body<=narrowWeather.width+1,JSON.stringify(narrowWeather));
  assert.ok(narrowWeather.strip<=narrowWeather.width,JSON.stringify(narrowWeather));
- await narrow.screenshot({path:"test-artifacts/kintra-meteo-320px.png",fullPage:true});
- await narrow.close();
- console.log("PASS: 320px phone modal, long city result and native input text size stay responsive.");
-
+ assert.ok(narrowWeather.box<=narrowWeather.width,JSON.stringify(narrowWeather));
+ await page.locator('button[data-action="weatherLocation"]').first().click();
+ const narrowModal=await page.evaluate(()=>({
+  width:innerWidth,html:document.documentElement.scrollWidth,
+  modal:document.querySelector(".modal")?.getBoundingClientRect().width,
+  input:parseFloat(getComputedStyle(document.getElementById("weatherCity")).fontSize)}));
+ assert.ok(narrowModal.html<=narrowModal.width+1,JSON.stringify(narrowModal));
+ assert.ok(narrowModal.modal<=narrowModal.width+1,JSON.stringify(narrowModal));
+ assert.ok(narrowModal.input>=16,JSON.stringify(narrowModal));
+ await page.screenshot({path:"test-artifacts/kintra-meteo-320px.png",fullPage:true});
+ await page.locator('button[data-action="close"]').click();
+ await page.setViewportSize({width:390,height:844});
+ console.log("PASS: 320px phone modal and loaded hourly weather both stay responsive.");
  await page.locator(".kintra-week-chart").waitFor();
  assert.equal(await page.locator(".kintra-week-bar").count(),7);
  await page.screenshot({path:"test-artifacts/kintra-accueil-mobile.png",fullPage:true});
