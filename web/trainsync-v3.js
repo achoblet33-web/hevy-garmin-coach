@@ -119,6 +119,7 @@
     const plans=dashboard.planned.slice().sort((a,b)=>a.date.localeCompare(b.date)).filter(a=>a.date>=localDay(-1)).slice(0,8);
     byId("ts3Calendar").innerHTML=plans.length?plans.map(e=>`<div class="ts3-entry"><div><strong>${esc(e.title)}</strong><small>${esc(e.type)} · ${e.structured?"structurée":"structure non confirmée"}</small></div><small>${dateFr(e.date)}</small></div>`).join(""):"Aucune séance à venir dans le calendrier interrogé.";
     byId("ts3Activities").innerHTML=runs.slice(0,8).map(a=>`<div class="ts3-entry"><div><strong>${esc(a.title)}</strong><small>${dateFr(a.startedAt)} · ${nf(a.distanceKm)} km · ${a.durationMinutes ?? "—"} min</small></div><small>${a.averageHeartRate == null?"—":Math.round(a.averageHeartRate)+" bpm"}</small></div>`).join("")||"Aucune course sur la période. Active la synchronisation Apple Santé → Intervals.icu dans Companion.";
+    window.dispatchEvent(new CustomEvent("trainsync:v3:dashboard",{detail:{activities:dashboard.activities,strength:dashboard.strength,wellness:dashboard.wellness,demo:!!dashboard.demo}}));
   }
   async function refresh() {
     const button=byId("ts3Refresh"); if(!button || requestBusy)return;
