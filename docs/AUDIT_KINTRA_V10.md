@@ -2,7 +2,11 @@
 
 **Date : 28 octobre 2026.** Périmètre audité : `web/runna-next/`, `preview/`, `Backend/`, `tests/`, workflows GitHub et déploiement Railway de la branche `feat/trainsync-3-intervals-hub`.
 
-**Méthode :** revue des fichiers, contrôles structurels et tests Node 22 / Chromium mobile / smoke HTTPS. Le service autonome « ECC » (si cela désigne Everything Claude Code) n'est pas relié à cet environnement ; le document ne prétend pas être une exécution ECC. Le code original Runna/Garmin, privé et propriétaire, n'a pas été copié.
+**Méthode :** revue des fichiers, contrôles structurels et tests Node 22 / Chromium mobile / smoke HTTPS. L’outil ECC interactif n’est pas connecté ici, mais sa composante officielle **AgentShield** a été exécutée dans GitHub Actions en lecture seule. Le code propriétaire Runna/Garmin n’a pas été copié.
+
+**AgentShield (ECC) :** premier scan [40705004460](https://github.com/achoblet33-web/hevy-garmin-coach/actions/runs/40705004460) : **grade A, 100/100, aucun finding**, sur agent-config / secrets / permissions / MCP. Le workflow est désormais fixé à un SHA de l’action vérifiée et utilise les paramètres reconnus. **Ce score ne certifie pas le code métier JavaScript ou la physiologie.**
+
+**Recette fonctionnelle :** [40705017058](https://github.com/achoblet33-web/hevy-garmin-coach/actions/runs/40705017058) : quatre contrôles verts (validation, HTTPS, production inchangée, navigateur mobile).
 
 ## Principales constatations et correctifs appliqués
 
