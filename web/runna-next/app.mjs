@@ -103,8 +103,21 @@ function activitiesView(){
  const stats=statData();
  const runlist=state.activities.filter(x=>x.category==="Course").slice(0,25);
  const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
+ const tabs=`<div class="kintra-progress-tabs" role="group" aria-label="Analyse de progression">${[["summary","Résumé"],["splits","Splits"],["hr","Fréquence cardiaque"]].map(([id,label])=>`<button class="${state.progressTab===id?"active":""}" data-action="progressTab:${id}">${label}</button>`).join("")}</div>`;
+ if(state.progressTab==="splits")return `<h2 class="pageTitle">Progression</h2>${tabs}
+ <div class="card"><h3 class="heading">Analyse des fractions</h3><p class="sub">Choisis une course terminée pour consulter les tours et fractions enregistrés dans Intervals.icu. Les allures ne sont jamais inventées.</p></div>
+ ${renderTrainingReview(state.activities,state.planned||[])}`;
+ if(state.progressTab==="hr"){
+  const valid=runlist.filter(x=>Number(x.averageHeartRate)>0).slice(0,9).reverse();
+  const max=Math.max(1,...valid.map(x=>Number(x.averageHeartRate)));
+  return `<h2 class="pageTitle">Progression</h2>${tabs}
+   <div class="card"><h3 class="heading">Fréquence cardiaque moyenne</h3>
+   <p class="sub">Mesures réelles de course issues d'Intervals.icu. Les séances sans capteur ne figurent pas dans le graphique.</p>
+   ${valid.length?valid.map(x=>`<div class="kintra-hr-row"><span>${e(String(x.startedAt).slice(0,10))}</span><div class="kintra-hr-track"><i style="width:${Math.round(Number(x.averageHeartRate)/max*100)}%"></i></div><strong>${Math.round(Number(x.averageHeartRate))} bpm</strong></div>`).join(""):`<div class="empty">Aucune fréquence cardiaque moyenne disponible sur les courses synchronisées.</div>`}
+   </div><div class="card"><h3 class="heading">Interprétation</h3><p class="sub">La fréquence cardiaque varie avec l'intensité, la chaleur et la fatigue. Sans zones et historique fiables, KINTRA ne déduit pas de préparation à partir de cette moyenne seule.</p></div>`;
+ }
  const long=Math.max(5,...runlist.map(x=>Number(x.distanceKm||0)));
- return `<h2 class="pageTitle">Progression</h2><p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
+ return `<h2 class="pageTitle">Progression</h2>${tabs}<p class="sub">Tes courses et tes résultats, au même endroit.</p>${warning}
  ${renderKintraProgressSummary({state,date:today()})}
  <div class="actions"><button class="btn secondary full" data-action="refreshData">Actualiser depuis Intervals.icu ↻</button></div>
  <div class="card"><div class="between"><h3 class="heading">Les 28 derniers jours</h3><span class="pill muted">${state.sourceMode==="demo"?"Données fictives":"Intervals.icu"}</span></div>
