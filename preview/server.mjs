@@ -20,6 +20,26 @@ const app=createServer(async(req,res)=>{
   res.setHeader("Cache-Control","no-store");
   if(u.pathname==="/health"){res.writeHead(200,{"Content-Type":"application/json"});return res.end(JSON.stringify({ok:true,mode:"active-capable",keyStoredOnServer:false}));}
   if(u.pathname==="/") {res.writeHead(302,{Location:"/runna-next/index.html"+(u.searchParams.get("demo")==="1"?"?demo=1":"")});return res.end();}
+  if(u.pathname==="/v3/weather"){
+    if(req.method!=="GET"){res.writeHead(405);return res.end();}
+    const lat=Number(u.searchParams.get("lat")),lon=Number(u.searchParams.get("lon"));
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){
+      res.writeHead(400,{"Content-Type":"application/json"});return res.end(JSON.stringify({error:"Coordonnées invalides."}));}
+    try {
+      const roundedLat=Math.round(lat*100)/100,roundedLon=Math.round(lon*100)/100;
+      const url=new URL("https://api.open-meteo.com/v1/forecast");
+      for(const [k,v] of [["latitude",roundedLat],["longitude",roundedLon],
+        ["current","temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"],
+        ["timezone","auto"],["forecast_days","1"]])url.searchParams.set(k,String(v));
+      const resp=await fetch(url,{signal:AbortSignal.timeout(10000),headers:{Accept:"application/json"}});
+      if(!resp.ok)throw Error("Weather API unavailable");
+      const raw=await resp.json(),w=raw.current||{};
+      res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"no-store"});
+      return res.end(JSON.stringify({ok:true,source:"Open-Meteo",temperature:w.temperature_2m??null,
+        apparent:w.apparent_temperature??null,humidity:w.relative_humidity_2m??null,
+        wind:w.wind_speed_10m??null,weatherCode:w.weather_code??null,at:w.time??null}));
+    }catch{res.writeHead(503,{"Content-Type":"application/json"});return res.end(JSON.stringify({error:"Météo momentanément indisponible."}));}
+  }
   if(u.pathname.startsWith("/v3/")) {
     try {
       const pieces=[];let size=0;for await(const part of req){size+=part.length;if(size>18000){res.writeHead(413);return res.end("Requête trop volumineuse");}pieces.push(part);}
