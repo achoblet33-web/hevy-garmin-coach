@@ -1,23 +1,19 @@
 {
-  "name": "TrainSync — Coach de course",
-  "short_name": "TrainSync",
-  "description": "Ton programme running personnel, semaine après semaine.",
+  "name": "KINTRA — Centre sportif et coach",
+  "short_name": "KINTRA",
+  "description": "Ton centre de performance : running, entraînements, récupération et programme adaptatif.",
   "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#100c12",
-  "theme_color": "#100c12",
+  "background_color": "#faf8f9",
+  "theme_color": "#faf8f9",
   "icons": [
     {
-      "src": "../icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "../icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "./kintra-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
