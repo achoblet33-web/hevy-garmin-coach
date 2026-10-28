@@ -198,10 +198,12 @@ function normalPage(){
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
  }
- return `<div class="app"><header class="top"><div><small>TrainSync · Coach</small><h1>${state.selected?"Ma séance":state.tab==="today"?"Bonjour 👋":state.tab==="plan"?"Mon entraînement":state.tab==="activities"?"Mes résultats":state.tab==="library"?"Courir":"Paramètres"}</h1></div>
+ return `<div class="app"><header class="top kintra-top">
+ <img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">
+ <div class="kintra-page-name">${state.selected?"Séance":state.tab==="today"?"Aujourd'hui":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Mon profil"}</div>
  <button class="circle" data-action="tab:profile" aria-label="Mon profil">◎</button></header>
  <main class="content">${DEMO?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre. <button class="textButton" data-action="goLive">Ouvrir la version active</button></div>`:!state.connected?`<div class="callout">Mode actif · Connecte ton compte Intervals.icu pour synchroniser les courses et envoyer des séances à l’Apple Watch. <button class="textButton" data-action="connect">Connecter maintenant ›</button></div>`:""}${content}</main></div>
- <nav class="nav" aria-label="Navigation principale">${[["today","☀","Aujourd'hui"],["plan","▦","Plan"],["activities","▥","Activités"],["profile","◎","Profil"]].map(([id,icon,name])=>`<button data-action="tab:${id}" class="${state.tab===id?"active":""}"><span class="symbol">${icon}</span>${name}</button>`).join("")}</nav>`;
+ <nav class="nav" aria-label="Navigation principale">${[["today","☀","Aujourd'hui"],["plan","◎","Coach"],["activities","▥","Progrès"],["profile","☰","Plus"]].map(([id,icon,name])=>`<button data-action="tab:${id}" class="${state.tab===id?"active":""}"><span class="symbol">${icon}</span>${name}</button>`).join("")}</nav>`;
 }
 function sheet(){
  const sh=state.sheet;if(!sh)return"";
@@ -213,7 +215,7 @@ function sheet(){
  <div class="formGrid"><label>Motif<select id="adaptKind"><option value="recovery">Fatigue / reprise</option><option value="holiday">Vacances / indisponibilité</option></select></label>
  <label>Adaptation<select id="adaptMode"><option value="easy">Uniquement facile</option><option value="off">Pause complète</option></select></label><label>Du<input id="adaptFrom" type="date" value="${today()}"></label><label>Au<input id="adaptTo" type="date" value="${add(today(),6)}"></label></div>
  <div class="actions"><button class="btn full" data-action="previewAdapt">Prévisualiser l'adaptation</button></div>`;
- if(sh==="preview")body=`<h2>Vérifier le nouveau plan</h2><p class="sub">${state.draft.totalWeeks} semaines · ${state.draft.profile.distanceKm} km · ${state.draft.profile.frequency} séances/semaine</p>
+ if(sh==="preview")body=`<h2>Vérifier le nouveau plan</h2><p class="sub">${state.draft.totalWeeks} semaines · ${state.draft.mode==="maintenance"?"Maintien":state.draft.profile.distanceKm+" km"} · ${state.draft.profile.frequency} séances/semaine</p>
  <div class="statrow"><div class="stat"><strong>${state.draft.summary[0]?.plannedKm??0}</strong><small>Semaine 1</small></div><div class="stat"><strong>${state.draft.sessions.length}</strong><small>Créneaux</small></div><div class="stat"><strong>${state.draft.totalWeeks}</strong><small>Semaines</small></div></div>
  ${state.draft.notes.map(n=>`<p class="warning">${e(n)}</p>`).join("")}
  <div class="actions"><button class="btn" data-action="acceptPlan">Adopter le plan</button><button class="btn secondary" data-action="close">Annuler</button></div>`;
@@ -372,7 +374,14 @@ async function perform(action,value){
   if(start>end)throw Error("Dates incohérentes.");
   const span=Math.round((new Date(end+"T12:00:00Z")-new Date(start+"T12:00:00Z"))/864e5)+1;
   if(span>21)throw Error("Limite de 21 jours pour l'aperçu; pour une interruption longue, recrée un programme.");
-  state.draft=generateRunningPlan(state.plan.profile,state.plan.createdAt,{...state.plan.modifiers,[kind]:{start,end,mode}});
+  if(state.plan.mode==="maintenance"){
+    const sessions=state.plan.sessions.map(x=>x.date>=start&&x.date<=end?{...x,
+      kind:mode==="off"?"rest":"easy",title:mode==="off"?"Repos":"Endurance facile",
+      distanceKm:mode==="off"?0:Math.min(x.distanceKm,4),intensity:"RPE 2–4",
+      reason:"Allègement demandé : adaptation non enregistrée avant validation."}:x);
+    state.draft={...state.plan,sessions,modifiers:{...state.plan.modifiers,[kind]:{start,end,mode}},
+      summary:state.plan.summary.map(w=>({...w,plannedKm:Math.round(sessions.filter(x=>x.week===w.week).reduce((n,x)=>n+x.distanceKm,0)*10)/10}))};
+  }else state.draft=generateRunningPlan(state.plan.profile,state.plan.createdAt,{...state.plan.modifiers,[kind]:{start,end,mode}});
   state.sheet="preview";draw();return;
  }
  if(action==="restore"){const old=state.versionHistory[Number(value)];if(!old)return;
