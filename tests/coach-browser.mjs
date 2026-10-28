@@ -50,6 +50,7 @@ try{
  await page.locator(".modal pre").waitFor({timeout:12000});
  assert.match(await page.locator(".modal pre").innerText(),/6x/);
  await page.locator("button[data-action='publishWatch']").click();
+ await page.getByRole("status").filter({hasText:"SIMULATION UNIQUEMENT"}).waitFor({timeout:15000});
  assert.match(await page.locator("#app").innerText(),/SIMULATION UNIQUEMENT/);
  console.log("PASS: Instant 6x800 preview and simulated publish, no live write.");
  assert.deepEqual(errors,[],"No uncaught browser errors");
