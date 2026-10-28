@@ -16,7 +16,7 @@ const mustKey=request=>{
 };
 function parseJsonResponse(response){return response.text().then(text=>{try{return text?JSON.parse(text):null}catch{return null}})}
 async function fetchIntervals(key,path,options={}){
- const target=BASE+path;
+ const target=path.startsWith("/activity/")?"https://intervals.icu/api/v1"+path:BASE+path;
  const auth=btoa("API_KEY:"+key);
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),17000);
@@ -34,7 +34,7 @@ const normalizeActivity=x=>{
  if(!stamp||!x.id)return null;
  const d=num(x.distance),time=num(x.moving_time)??num(x.elapsed_time)??num(x.duration);
  const type=x.type||x.sport_type||"";
- return {id:"intervals:"+x.id,source:"Intervals.icu",provider:x.source||null,
+ return {id:"intervals:"+x.id,externalId:String(x.id),pairedEventId:x.paired_event_id==null?null:String(x.paired_event_id),source:"Intervals.icu",provider:x.source||null,
   category:/run/i.test(type)?"Course":/weight|strength/i.test(type)?"Musculation":"Autre",
   title:x.name||type||"Activité",type,startedAt:stamp,distanceKm:d==null?null:+(d/1000).toFixed(2),
   durationMinutes:time==null?null:Math.round(time/60),averageHeartRate:num(x.average_heartrate??x.avg_hr),
@@ -42,6 +42,8 @@ const normalizeActivity=x=>{
 };
 const normalizeEvent=x=>({id:String(x.id??""),externalId:x.external_id||null,title:x.name||"Séance",
  date:String(x.start_date_local||"").slice(0,10),type:x.type||"",
+ pairedActivityId:x.paired_activity_id==null?null:String(x.paired_activity_id),
+ distanceKm:num(x.distance)==null?null:+(Number(x.distance)/1000).toFixed(2),
  description:x.description||"",structured:!!(Array.isArray(x.workout_doc?.steps)&&x.workout_doc.steps.length),
  durationMinutes:num(x.moving_time)==null?null:Math.round(Number(x.moving_time)/60)});
 async function dashboard(request,key){
@@ -67,6 +69,30 @@ async function dashboard(request,key){
     sleepSecs:num(x.sleepSecs),weight:num(x.weight),steps:num(x.steps),ctl:num(x.ctl),atl:num(x.atl)})),
   strength:[],warnings,sources:{intervals:{ok:results[0].status==="fulfilled"},calendar:{ok:results[1].status==="fulfilled"},
     wellness:{ok:results[2].status==="fulfilled"},hevy:{ok:false,configured:false}}});
+}
+// Runna-like post-run interval analysis, read-only and restricted to one named activity.
+async function activityIntervals(request,key){
+ const u=new URL(request.url),id=String(u.pathname.split("/").at(-2)||"");
+ if(!/^[A-Za-z0-9_-]{1,80}$/.test(id))return json({error:"Identifiant d'activité invalide."},400);
+ const data=await fetchIntervals(key,"/activity/"+encodeURIComponent(id)+"/intervals");
+ const rows=Array.isArray(data?.icu_intervals)?data.icu_intervals:
+   Array.isArray(data?.intervals)?data.intervals:Array.isArray(data?.user_intervals)?data.user_intervals:[];
+ const normalized=rows.slice(0,150).map((x,i)=>({
+   index:i+1,
+   label:String(x.name||x.type||x.group_name||"Segment "+(i+1)).slice(0,90),
+   distanceMeters:num(x.distance),
+   durationSeconds:num(x.moving_time??x.elapsed_time??x.duration),
+   averageHeartRate:num(x.average_heartrate??x.avg_hr),
+   averagePaceMinKm:null,
+   paceSecondsKm:num(x.pace),
+   averagePower:num(x.average_watts),
+   cadence:num(x.average_cadence)
+ }));
+ for(const x of normalized)if(x.durationSeconds>0&&x.distanceMeters>0){
+   x.averagePaceMinKm=+((x.durationSeconds/60)/(x.distanceMeters/1000)).toFixed(2);
+ }
+ return json({ok:true,id,segments:normalized,source:"Intervals.icu",intervalsAvailable:rows.length>0,
+   note:rows.length?"Segments retournés par Intervals.icu, pas nécessairement les répétitions planifiées.":"Aucun segment analysable fourni par Intervals.icu pour cette activité."});
 }
 async function publish(request,key){
  const data=await request.json();
@@ -107,6 +133,8 @@ export default {
    }
    const key=mustKey(request);
    if(u.pathname==="/v3/dashboard"&&request.method==="GET")return dashboard(request,key);
+   if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/intervals$/.test(u.pathname)&&request.method==="GET")
+     return activityIntervals(request,key);
    if(u.pathname==="/v3/workouts/publish"&&request.method==="POST")return publish(request,key);
    return json({error:"Route ou méthode inconnue."},404);
   }catch(error){
