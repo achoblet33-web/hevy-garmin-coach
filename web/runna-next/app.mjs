@@ -9,7 +9,7 @@ const monday=x=>add(x,-weekday(x));
 const fmt=x=>new Date(x+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
 const full=x=>new Date(x+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 const km=n=>Number(n||0).toLocaleString("fr-FR",{maximumFractionDigits:1});
-const colors={easy:"#35d9ad",long:"#a795ff",interval:"#ff8a69",tempo:"#f9c451",race:"#f5e07b",rest:"#7c8c94",recovery:"#66c5ed"};
+const colors={easy:"#ff9b9c",long:"#d982a6",interval:"#ff526b",tempo:"#ffad8d",race:"#ffc1b4",rest:"#967a84",recovery:"#f4a1b5"};
 const labels={easy:"Endurance fondamentale",long:"Sortie longue",interval:"Fractionné",tempo:"Tempo",race:"Course objectif",rest:"Repos",recovery:"Récupération"};
 const emoji={easy:"🏃",long:"↗",interval:"⚡",tempo:"◈",race:"🏁",rest:"◯",recovery:"♧"};
 const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
