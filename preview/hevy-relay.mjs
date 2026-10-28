@@ -1,4 +1,5 @@
 // Read-only Hevy Pro connector. Keys are per-request and not persisted server-side.
+const numeric=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const response=(payload,status=200)=>new Response(JSON.stringify(payload),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store","X-Robots-Tag":"noindex"}});
 export async function hevyFetch(request){
  const key=request.headers.get("x-hevy-api-key")||"";
@@ -23,12 +24,13 @@ export async function hevyFetch(request){
   const normalized=workouts.slice(0,60).map(x=>({
    id:"hevy:"+String(x.id||""),source:"Hevy",category:"Musculation",
    title:String(x.title||"Séance Hevy").slice(0,150),startedAt:x.start_time||x.created_at||null,
+   endedAt:x.end_time||null,notes:String(x.description||"").slice(0,450),
    exercises:Array.isArray(x.exercises)?x.exercises.slice(0,40).map(z=>({
     title:String(z.title||z.exercise_template?.title||"Exercice").slice(0,100),
+    templateId:String(z.exercise_template_id||"").slice(0,70),notes:String(z.notes||"").slice(0,350),
     sets:Array.isArray(z.sets)?z.sets.slice(0,60).map(set=>({
-     reps:Number.isFinite(Number(set.reps))?Number(set.reps):null,
-     weightKg:Number.isFinite(Number(set.weight_kg))?Number(set.weight_kg):null,
-     rpe:Number.isFinite(Number(set.rpe))?Number(set.rpe):null
+     reps:numeric(set.reps),weightKg:numeric(set.weight_kg),rpe:numeric(set.rpe),
+     type:String(set.type||"normal").slice(0,25),durationSeconds:numeric(set.duration_seconds),distanceMeters:numeric(set.distance_meters)
     })):[]
    })):[]
   })).filter(x=>x.startedAt);
