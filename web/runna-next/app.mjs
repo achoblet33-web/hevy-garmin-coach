@@ -115,7 +115,8 @@ function activitiesView(){
  const stats=statData();
  const runlist=state.activities.filter(x=>x.category==="Course").slice(0,25);
  const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
- const tabs=`<div class="kintra-progress-tabs" role="group" aria-label="Analyse de progression">${[["summary","Résumé"],["splits","Splits"],["hr","Fréquence cardiaque"]].map(([id,label])=>`<button class="${state.progressTab===id?"active":""}" data-action="progressTab:${id}">${label}</button>`).join("")}</div>`;
+ const tabs=`<div class="kintra-progress-tabs" role="group" aria-label="Analyse de progression">${[["summary","Résumé"],["splits","Splits"],["hr","Fréquence cardiaque"],["hevy","Hevy"]].map(([id,label])=>`<button class="${state.progressTab===id?"active":""}" data-action="progressTab:${id}">${label}</button>`).join("")}</div>`;
+ if(state.progressTab==="hevy")return `<h2 class="pageTitle">Musculation Hevy Pro</h2>${tabs}${renderHevyWorkouts(state.hevySessions,!!state.hevyKey,state.hevyPartial)}`;
  if(state.progressTab==="splits")return `<h2 class="pageTitle">Progression</h2>${tabs}
  <div class="card"><h3 class="heading">Analyse des fractions</h3><p class="sub">Choisis une course terminée pour consulter les tours et fractions enregistrés dans Intervals.icu. Les allures ne sont jamais inventées.</p></div>
  ${renderTrainingReview(state.activities,state.planned||[])}`;
@@ -166,7 +167,8 @@ function profileView(){
  <div class="card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
  <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
  <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">${state.hevyKey?"Hevy Pro connecté · séances de musculation synchronisées":localStorage.getItem(HEVY_VAULT)?"Connexion chiffrée à déverrouiller":"Connexion facultative · API Hevy Pro"}</p></div></div>
- <div class="actions"><button class="btn secondary" data-action="connect">Intervals.icu</button><button class="btn secondary" data-action="hevy">Hevy Pro</button></div></div>
+ <div class="actions"><button class="btn secondary" data-action="connect">Intervals.icu</button><button class="btn secondary" data-action="hevy">Hevy Pro</button></div>
+ <div class="actions"><button class="btn full" data-action="showHevy">Voir mes séances de musculation ›</button></div></div>
  ${state.watchSuccess?`<div class="card">
  <div class="eyebrow">Séance préparée pour l'Apple Watch</div>
  <h3 class="heading">${state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
@@ -369,7 +371,7 @@ async function refreshWeather(place=state.weatherPlace){
  if(!place||!Number.isFinite(Number(place.latitude))||!Number.isFinite(Number(place.longitude)))
   throw Error("Choisis une ville pour consulter les prévisions.");
  const response=await fetch("/v3/weather?lat="+encodeURIComponent(place.latitude)+"&lon="+encodeURIComponent(place.longitude),
-  {cache:"no-store",signal:AbortSignal.timeout(16000)});
+  {cache:"no-store",signal:AbortSignal.timeout(36000)});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.ok)throw Error(data.error||"Météo momentanément indisponible.");
  state.weather=data;state.weatherPlace=place;persist();draw();
@@ -482,6 +484,7 @@ async function perform(action,value){
  }
  if(action==="backHevy"){state.hevyFocus=null;state.tab="activities";draw();return;}
  if(action==="refreshHevy"){await syncHevy();alertText("Séances Hevy synchronisées.");return;}
+ if(action==="showHevy"){state.tab="activities";state.progressTab="hevy";state.activityFocus=null;state.hevyFocus=null;draw();return;}
  if(action==="mapTiles"){
   if(!state.activityDetail?.route?.hasGps)throw Error("Aucune trace GPS à afficher.");
   state.mapEnabled=!state.mapEnabled;draw();return;
@@ -510,7 +513,7 @@ async function perform(action,value){
    state.step=0;state.wizard=true;state.selected=null;state.sheet=null;draw();return;
  }
  if(action==="toggleAdvice"){state.adaptiveSuggestions=!state.adaptiveSuggestions;persist();draw();return;}
- if(action==="progressTab"){state.progressTab=["summary","splits","hr"].includes(value)?value:"summary";draw();return;}
+ if(action==="progressTab"){state.progressTab=["summary","splits","hr","hevy"].includes(value)?value:"summary";draw();return;}
  if(action==="goalMode"){state.form.mode=value==="maintenance"?"maintenance":"event";draw();return;}
  if(action==="focus"){state.form.maintenanceFocus=["balance","endurance","speed"].includes(value)?value:"balance";draw();return;}
  if(action==="wizardBack"){if(state.step===0){state.wizard=false;}else state.step--;draw();return;}
