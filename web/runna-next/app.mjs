@@ -19,7 +19,8 @@ const emoji={easy:"🏃",long:"↗",interval:"⚡",tempo:"◈",race:"🏁",rest:
 const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
-let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+const HEVY_VAULT="kintra-hevy-encrypted-v1";
+let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -116,8 +117,8 @@ function profileView(){
  <div class="actions"><button class="btn secondary" data-action="setup">${p?"Créer un autre programme":"Définir mon objectif"}</button></div></div>
  <div class="card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
  <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
- <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">Intégration complémentaire à connecter ultérieurement</p></div></div>
- <div class="actions"><button class="btn secondary" data-action="connect">Gérer les connexions</button></div></div>
+ <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">${state.hevyKey?"Hevy Pro connecté · séances de musculation synchronisées":localStorage.getItem(HEVY_VAULT)?"Connexion chiffrée à déverrouiller":"Connexion facultative · API Hevy Pro"}</p></div></div>
+ <div class="actions"><button class="btn secondary" data-action="connect">Intervals.icu</button><button class="btn secondary" data-action="hevy">Hevy Pro</button></div></div>
  ${state.watchSuccess?`<div class="card">
  <div class="eyebrow">Séance préparée pour l'Apple Watch</div>
  <h3 class="heading">${state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
@@ -246,6 +247,15 @@ function sheet(){
   ${state.connected?`<div class="callout">Compte Intervals.icu connecté. Les activités et les séances sont réelles.</div>`:""}
   <div class="actions"><button class="btn ghost full" data-action="disconnect">Déconnecter et oublier la clé sauvegardée</button></div>
   <p class="sub"><strong>Apple Watch :</strong> ouvre Intervals.icu Companion → More → Workout Settings → active « Automatically Sync Planned Workouts to Apple Watch ».</p>`;
+ if(sh==="hevy")body=`<h2>Connecter Hevy Pro</h2>
+ <p class="sub">Le service Hevy propose une API personnelle aux comptes Pro. Les séances sont lues uniquement en consultation, jamais modifiées.</p>
+ <div class="callout">Clé disponible sur <strong>hevy.com/settings?developer</strong> avec un abonnement Hevy Pro. Ne transmets jamais cette clé dans le chat.</div>
+ <label style="margin-top:12px">Clé API Hevy Pro<input id="hevyToken" type="password" placeholder="UUID de ta clé Hevy" autocomplete="off"></label>
+ <label style="margin-top:12px">Phrase secrète de sauvegarde (facultatif)<input id="hevyPass" type="password" autocomplete="new-password" placeholder="10 caractères minimum"></label>
+ <div class="actions"><button class="btn full" data-action="hevyConnect">Connecter Hevy Pro</button></div>
+ ${localStorage.getItem(HEVY_VAULT)?`<label>Déverrouiller une clé sauvegardée<input id="hevyUnlockPass" type="password" autocomplete="off"></label>
+ <div class="actions"><button class="btn secondary full" data-action="hevyUnlock">Déverrouiller Hevy</button></div>`:""}
+ <div class="actions"><button class="btn ghost full" data-action="hevyDisconnect">Déconnecter Hevy</button></div>`;
  if(sh==="watch")body=`<h2>Préparer sur l'Apple Watch</h2><p class="sub">Une séance structurée sera publiée dans Intervals.icu uniquement après ton accord.</p>
  <div class="formGrid"><label>Type<select id="watchKind">${["easy","long","tempo","interval"].map(k=>`<option value="${k}" ${state.watch?.kind===k?"selected":""}>${labels[k]}</option>`).join("")}</select></label>
  <label>Jour prévu<input id="watchDate" type="date" value="${state.watch?.date||add(today(),1)}" min="${today()}"></label>
@@ -300,6 +310,16 @@ async function refreshWeather(){
  if(!response.ok||!data.ok)throw Error(data.error||"Météo momentanément indisponible.");
  state.weather=data;draw();
 }
+async function syncHevy(){
+ if(!state.hevyKey)return;
+ const res=await fetch("/v3/hevy/workouts",{headers:{"x-hevy-api-key":state.hevyKey},
+  cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const data=await res.json();
+ if(!res.ok||!data.ok)throw Error(data.error||"Hevy indisponible.");
+ state.hevySessions=Array.isArray(data.strength)?data.strength:[];
+ state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
+ draw();
+}
 async function loadLaps(){
  if(!state.connected&&!DEMO){
    state.activitySegments={error:"Connecte ton compte Intervals.icu pour consulter les fractions réelles."};
@@ -316,12 +336,14 @@ async function sync(){
  try{
   const data=await api("/dashboard?days=90");
   state.activities=Array.isArray(data.activities)?data.activities:[];
-  state.strength=Array.isArray(data.strength)?data.strength:[];
+  state.intervalsStrength=Array.isArray(data.strength)?data.strength:[];
+  state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
   state.wellness=Array.isArray(data.wellness)?data.wellness:[];
   state.planned=Array.isArray(data.planned)?data.planned:[];
   state.syncedAt=data.syncedAt||new Date().toISOString();
   state.sourceMode=data.demo?"demo":data.ok?"intervals":"partial";
   state.syncNote=(data.warnings||[]).join(" · ");
+  if(state.hevyKey){try{await syncHevy();}catch(error){state.syncNote+=" · Hevy : "+error.message;}}
   draw();
  }catch(err){state.syncNote=err.message;alertText("Synchronisation : "+err.message);}
 }
