@@ -1,5 +1,6 @@
 import {evaluateSportContext,evaluateReadiness,recommendWorkout} from "./kintra-coach.mjs";
 import {forecastSlots,formatLocalHour} from "./kintra-weather.mjs";
+import {sleepTrend,strengthDistribution,renderWeeklyChart,formatTime} from "./kintra-presenter.mjs";
 const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const shown=n=>n==null||!Number.isFinite(Number(n))?"—":Number(n).toLocaleString("fr-FR",{maximumFractionDigits:1});
 const short=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
@@ -16,13 +17,14 @@ function recoveryCard(readiness){
   ${readiness.freshness?`<small class="kintra-source-hint">Mesures du ${safe(readiness.freshness)} · ${readiness.referenceDays} nuits de référence disponibles</small>`:""}
  </article>`;
 }
-function sleepCard(context){
- let label=context.sleepHours==null?"Données non disponibles":context.sleepHours.toLocaleString("fr-FR",{maximumFractionDigits:1})+" h";
- const actual=context.sleepScore==null?null:shown(context.sleepScore);
+function sleepCard(context,wellness,date){
+ const trend=sleepTrend(wellness,date),label=trend.hours==null?"—":trend.hours+"h "+String(trend.minutes).padStart(2,"0");
+ const trendText=trend.changePct==null?"Tendance : historique insuffisant":(trend.changePct>0?"+":"")+trend.changePct+" % par rapport aux nuits précédentes";
  return `<article class="kintra-sleep-card" data-testid="sleep-card">
  <div class="kintra-sleep-moon">☾</div><div class="kintra-sleep-detail"><span class="eyebrow">SOMMEIL & RÉCUPÉRATION</span>
- <strong>${safe(label)}</strong><span class="sub">${actual==null?"Qualité : pas de score fourni": "Score fourni : "+actual}
- ${context.latestDate?" · "+safe(context.latestDate):""}</span></div>
+ <strong>${safe(label)}</strong><span class="sub">${trend.score==null?"Score non fourni":"Score de sommeil : "+shown(trend.score)}
+ · ${safe(trendText)}</span>
+ <small class="kintra-source-hint">${trend.date?"Mesure du "+safe(trend.date):"Aucune nuit récente synchronisée"}</small></div>
  <button class="kintra-mini-button" data-action="tab:activities" aria-label="Voir la récupération">›</button></article>`;
 }
 function weatherCard(state){
@@ -60,26 +62,26 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
  const featured=sessions.find(x=>x.kind!=="rest")||upcoming[0]||null;
  const advice=recommendWorkout({plan,context:ctx,date});
  const sourceStrength=state.hevyKey?state.hevySessions:state.strength;
- const muscleCount=(sourceStrength||[]).filter(x=>{
-  const dt=String(x.startedAt||"").slice(0,10);return dt>=dateAdd(date,-6)&&dt<=date;
- }).length;
+ const muscle=strengthDistribution(sourceStrength||[],date);
+ const muscleCount=muscle.total;
  return `<div class="kintra-welcome"><span class="eyebrow">KINTRA · TON HUB SPORTIF</span>
  <h2>Aujourd'hui,<br><em>fais le point.</em></h2><p>Ton entraînement, tes tendances et ta récupération, sans chiffres fictifs.</p></div>
  ${recoveryCard(ready)}
- ${sleepCard(ctx)}
+ ${sleepCard(ctx,state.wellness,date)}
  ${featured?`<button class="kintra-next-workout" data-action="session:${safe(featured.id)}" data-testid="next-workout">
   <span class="kintra-next-icon">↗</span><span class="kintra-next-main"><small>PROCHAINE SÉANCE SUGGÉRÉE · ${short(featured.date)}</small>
-  <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${safe(featured.intensity||"Intensité au ressenti")}</span>
+  <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${featured.durationMinutes?formatTime(featured.durationMinutes)+" · ":""}${safe(featured.intensity||"Intensité au ressenti")}</span>
   <small>${state.adaptiveSuggestions?safe(advice.reason):"Adaptations automatiques désactivées"}</small></span><b>›</b></button>`:
  `<div class="kintra-next-empty"><strong>Quel est ton prochain objectif ?</strong><p class="sub">Crée un plan ou un cycle maintien pour recevoir une prochaine séance.</p>
  <button class="btn" data-action="setup">Créer mon programme</button></div>`}
  <div class="kintra-data-grid" data-testid="weekly-training-tiles">
   <article class="kintra-tile"><div class="kintra-card-label">↗ COURSE · 7 JOURS</div>
   <div class="kintra-number">${ctx.runCount} <small>séances</small></div>
-  <p class="sub">${shown(ctx.weeklyKm)} km parcourus</p></article>
+  <p class="sub">${shown(ctx.weeklyKm)} km parcourus</p>${renderWeeklyChart(state.activities,date,plan)}</article>
   <article class="kintra-tile"><div class="kintra-card-label">▤ ${state.hevyKey?"HEVY PRO":"MUSCULATION"} · 7 JOURS</div>
   <div class="kintra-number">${muscleCount} <small>séances</small></div>
-  <p class="sub">${state.hevyKey?"Séances importées de Hevy": "Connecter Hevy dans Plus"}</p></article>
+  <p class="sub">${state.hevyKey?"Hevy Pro synchronisé":"Hevy disponible dans Plus"}</p>
+ <div class="kintra-muscle-breakdown">${muscle.upper||muscle.lower?`Haut ${muscle.upper} · Bas ${muscle.lower}`:"Répartition non précisée"}${muscle.mixed?` · Mixte ${muscle.mixed}`:""}</div></article>
  </div>
  ${weatherCard(state)}
  ${program?program():""}
