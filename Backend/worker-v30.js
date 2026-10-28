@@ -5,6 +5,7 @@
  * Configure Backend/wrangler.jsonc main=worker-v30.js ONLY after preview validation.
  */
 import legacy from "./worker-v23.js";
+import { buildRunningWorkout } from "./running-workouts.mjs";
 const VERSION = "3.0.0-preview.1";
 const API = "https://intervals.icu/api/v1";
 const HEADERS = {
@@ -114,31 +115,7 @@ async function dashboard(request, env) {
     note: "Intervals.icu est la référence des activités. Hevy reste la référence des séries et charges. Aucun doublon n'est écrit dans Apple Santé.",
   });
 }
-function buildWorkout(input) {
-  const kind = String(input.kind || "");
-  if (!["easy","long","interval","tempo"].includes(kind)) throw Object.assign(new Error("Type de séance invalide."), { status: 400 });
-  const date = String(input.date || "");
-  if (!isoDay(date) || date < today() || date > dayShift(today(), 365)) throw Object.assign(new Error("Date de séance invalide ou passée."), { status: 400 });
-  const duration = clamp(input.durationMinutes, 20, kind === "long" ? 180 : 120, 45);
-  const reps = clamp(input.repeats, 3, 12, 6);
-  const meters = clamp(input.intervalMeters, 200, 2000, 800);
-  const names = { easy:"Endurance fondamentale",long:"Sortie longue",interval:"Fractionné",tempo:"Tempo / seuil" };
-  let description, totalMinutes = duration;
-  if (kind === "interval") {
-    description = `Échauffement\n- 12m Z2 Pace\n\n${reps}x\n- ${meters}mtr Z4 Pace\n- 2m Z1 Pace\n\nRetour au calme\n- 8m Z1 Pace`;
-    totalMinutes = null; // Distance intervals cannot be timed without personal threshold pace.
-  } else if (kind === "tempo") {
-    const middle = Math.max(8, duration - 20);
-    description = `Échauffement\n- 12m Z2 HR\n\nTempo\n- ${middle}m Z3 HR\n\nRetour au calme\n- 8m Z1 HR`;
-  } else {
-    description = `Départ facile\n- 10m Z1 HR\n\nEndurance\n- ${duration - 15}m Z2 HR\n\nRetour au calme\n- 5m Z1 HR`;
-  }
-  const name = `TrainSync · ${names[kind]}`;
-  const stablePart = kind === "interval" ? `${reps}x${meters}` : String(duration);
-  const externalId = `trainsync3-${date}-${kind}-${stablePart}`;
-  return { category:"WORKOUT", type:"Run", start_date_local:`${date}T00:00:00`, name, description, external_id: externalId,
-    ...(totalMinutes ? { moving_time: totalMinutes * 60 } : {}) };
-}
+function buildWorkout(input) { return buildRunningWorkout(input, today()); }
 async function publish(request, env) {
   const body = await request.json().catch(() => ({}));
   const workout = buildWorkout(body);
