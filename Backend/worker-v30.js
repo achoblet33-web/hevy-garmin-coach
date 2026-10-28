@@ -76,9 +76,11 @@ async function dashboard(request, env) {
   const days = clamp(url.searchParams.get("days"), 7, 180, 42);
   const end = today(), start = dayShift(end, -days);
   const query = `oldest=${start}&newest=${end}`;
+  // Calendar must include future workouts; the activity/wellness lookback must not.
+  const calendarQuery = `oldest=${dayShift(end,-7)}&newest=${dayShift(end,42)}`;
   const results = await Promise.allSettled([
     intervalRequest(env, `/activities?${query}`),
-    intervalRequest(env, `/events?${query}&category=WORKOUT`),
+    intervalRequest(env, `/events?${calendarQuery}&category=WORKOUT`),
     intervalRequest(env, `/wellness?${query}`),
     // Reuse existing Hevy authentication/normalization; never expose API key to PWA.
     legacy.fetch(new Request(new URL(`/sync?days=${days}`, request.url), { headers: { Authorization: request.headers.get("Authorization") || "" } }), env, {}),
@@ -126,8 +128,13 @@ async function publish(request, env) {
   const match = (Array.isArray(existing) ? existing : []).find(e => e.external_id === workout.external_id);
   if (match) return json({ ok: true, existing: true, event: normalizeEvent(match),
     message: "Cette séance existe déjà dans Intervals.icu. Aucun doublon créé.", watchStatus: "non vérifié" });
-  const event = await intervalRequest(env, "/events", { method:"POST", body: JSON.stringify(workout) });
-  const normalized = normalizeEvent(event || {});
+  // Intervals.icu documents bulk upsert using external_id as the stable client key.
+  const results = await intervalRequest(env, "/events/bulk?upsert=true", { method:"POST", body: JSON.stringify([workout]) });
+  const created = Array.isArray(results) ? results[0] : null;
+  if (!created?.id) throw Object.assign(new Error("Publication non confirmée par Intervals.icu. Vérifier le calendrier avant de réessayer."), {status:502});
+  // Read the persisted event to verify structural parsing; do not conflate this with watch sync.
+  const event = await intervalRequest(env, `/events/${encodeURIComponent(String(created.id))}`);
+  const normalized = normalizeEvent(event || created);
   return json({ ok:true, existing:false, event:normalized, watchStatus:"non vérifié",
     message: normalized.structured
       ? "Séance structurée créée dans Intervals.icu. Ouvre Companion pour contrôler l'envoi sur l'Apple Watch."
