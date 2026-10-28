@@ -1,4 +1,5 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
+import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -13,8 +14,9 @@ const colors={easy:"#ff9b9c",long:"#d982a6",interval:"#ff526b",tempo:"#ffad8d",r
 const labels={easy:"Endurance fondamentale",long:"Sortie longue",interval:"Fractionné",tempo:"Tempo",race:"Course objectif",rest:"Repos",recovery:"Récupération"};
 const emoji={easy:"🏃",long:"↗",interval:"⚡",tempo:"◈",race:"🏁",rest:"◯",recovery:"♧"};
 const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
-const DEMO=new URLSearchParams(location.search).has("demo") || location.hostname===LIVE_HOST;
-let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:"demo"};
+const DEMO=new URLSearchParams(location.search).get("demo")==="1";
+const KEY_VAULT="trainsync-intervals-encrypted-v1";
+let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",watchSuccess:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
@@ -193,11 +195,26 @@ function sheet(){
  <label>Difficulté perçue (RPE)<select id="feedbackRpe">${Array.from({length:10},(_,i)=>`<option value="${i+1}">${i+1} / 10</option>`).join("")}</select></label>
  <label style="margin-top:12px">Commentaire<input id="feedbackText" maxlength="220" placeholder="Ex. jambes lourdes, vent, chaleur"></label>
  <div class="actions"><button class="btn full" data-action="saveFeedback">Enregistrer le ressenti</button></div>`;
- if(sh==="connect")body=`<h2>Connecter tes données</h2><p class="sub">Le transfert des séances depuis TrainSync utilise le Preview Cloudflare et Intervals.icu Companion. Aucun jeton n'est stocké dans le navigateur après actualisation.</p>
- <div class="warning">N'utilise jamais l'URL ni le jeton de production pour cette préproduction. Le serveur de démonstration Railway ne reçoit pas tes identifiants.</div>
- <label style="margin-top:12px">URL du Worker Preview Cloudflare<input id="apiUrl" type="url" placeholder="https://xxxx.workers.dev" autocomplete="off"></label>
- <label style="margin-top:12px">Jeton du Preview<input id="apiToken" type="password" autocomplete="off"></label>
- <div class="actions"><button class="btn full" data-action="connectNow">Tester la connexion</button><button class="btn secondary" data-action="disconnect">Déconnecter</button></div>`;
+ if(sh==="connect")body=DEMO?
+  `<h2>Mode démonstration</h2><p class="sub">Ouvre la version active pour te connecter à ton vrai compte Intervals.icu. Les données de cette démonstration resteront fictives.</p>
+    <button class="btn full" data-action="goLive">Passer à TrainSync actif</button>`:
+  `<h2>Connecter Intervals.icu</h2>
+  <p class="sub">Ta clé personnelle est utilisée pour lire tes courses et publier tes séances. Elle est envoyée uniquement à ton serveur TrainSync, sur HTTPS, et n'est jamais enregistrée côté serveur.</p>
+  <div class="callout"><strong>Où trouver la clé ?</strong><br>Ouvre intervals.icu → Paramètres (Settings) → Developer Settings → API Key. Copie ta clé ici, jamais dans la conversation ou GitHub.</div>
+  <label style="margin-top:15px">Clé API personnelle Intervals.icu
+    <input id="apiToken" type="password" placeholder="Colle ta clé Intervals.icu" autocomplete="off" autocapitalize="none" spellcheck="false">
+  </label>
+  <label style="margin-top:12px">Phrase secrète pour sauvegarder la connexion (facultatif)
+    <input id="apiVaultPass" type="password" placeholder="10 caractères minimum" autocomplete="new-password" spellcheck="false">
+  </label>
+  <p class="sub">Sans phrase secrète, la clé reste seulement en mémoire jusqu'à la fermeture ou au rechargement. Avec une phrase secrète, elle est chiffrée sur cet iPhone et tu pourras la déverrouiller à la prochaine ouverture.</p>
+  <div class="actions"><button class="btn full" data-action="connectNow">Connecter mon compte</button></div>
+  `{localStorage.getItem(KEY_VAULT)?`<div class="line"></div><strong>Connexion sauvegardée sur cet appareil</strong>
+  <label>Phrase de déverrouillage<input id="apiUnlockPass" type="password" autocomplete="off" placeholder="Ta phrase secrète"></label>
+  <div class="actions"><button class="btn secondary full" data-action="unlockNow">Déverrouiller ma connexion</button></div>`:""}
+  `{state.connected?`<div class="callout">Compte Intervals.icu connecté. Les activités et les séances sont réelles.</div>`:""}
+  <div class="actions"><button class="btn ghost full" data-action="disconnect">Déconnecter et oublier la clé sauvegardée</button></div>
+  <p class="sub"><strong>Apple Watch :</strong> ouvre Intervals.icu Companion → More → Workout Settings → active « Automatically Sync Planned Workouts to Apple Watch ».</p>`;
  if(sh==="watch")body=`<h2>Préparer sur l'Apple Watch</h2><p class="sub">Une séance structurée sera publiée dans Intervals.icu uniquement après ton accord.</p>
  <div class="formGrid"><label>Type<select id="watchKind">${["easy","long","tempo","interval"].map(k=>`<option value="${k}" ${state.watch?.kind===k?"selected":""}>${labels[k]}</option>`).join("")}</select></label>
  <label>Jour prévu<input id="watchDate" type="date" value="${state.watch?.date||add(today(),1)}" min="${today()}"></label>
@@ -226,17 +243,28 @@ function wizardValues(){
  if(state.step===2){f.availableDays=[...document.querySelectorAll("[data-day]:checked")].map(x=>Number(x.dataset.day));f.longDay=Number($("longDay").value);}
 }
 async function api(path,options={}){
- if(!state.connected){
-  const response=await fetch("/v3"+path,{...options,cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error||"API démo indisponible.");return data;
- }
- const res=await fetch(state.apiOrigin+"/v3"+path,{...options,headers:{Authorization:"Bearer "+state.apiToken,...(options.body?{"Content-Type":"application/json"}:{})},signal:AbortSignal.timeout(22000),cache:"no-store"});
- const data=await res.json();if(!res.ok)throw Error(data.error||"Connexion Intervals.icu indisponible.");return data;
+ const isDemo=DEMO&&!state.connected;
+ const url="/v3"+path+(isDemo?(path.includes("?")?"&":"?")+"demo=1":"");
+ if(!isDemo&&!state.connected)throw Error("Connecte d'abord ton compte Intervals.icu depuis Profil.");
+ const res=await fetch(url,{...options,
+  headers:{...(options.body?{"Content-Type":"application/json"}:{}),...(!isDemo?{"x-intervals-api-key":state.apiToken}:{})},
+  cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(25000)});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok)throw Error(data.error||"Intervals.icu indisponible (HTTP "+res.status+").");
+ return data;
 }
 async function sync(){
+ if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=[];state.sourceMode="disconnected";draw();return;}
  try{
-  const data=await api("/dashboard?days=90");state.activities=Array.isArray(data.activities)?data.activities:[];state.strength=Array.isArray(data.strength)?data.strength:[];state.wellness=Array.isArray(data.wellness)?data.wellness:[];state.sourceMode=data.demo?"demo":"intervals";
+  const data=await api("/dashboard?days=90");
+  state.activities=Array.isArray(data.activities)?data.activities:[];
+  state.strength=Array.isArray(data.strength)?data.strength:[];
+  state.wellness=Array.isArray(data.wellness)?data.wellness:[];
+  state.planned=Array.isArray(data.planned)?data.planned:[];
+  state.sourceMode=data.demo?"demo":data.ok?"intervals":"partial";
+  state.syncNote=(data.warnings||[]).join(" · ");
   draw();
- }catch(err){alertText("Données non accessibles : "+err.message)}
+ }catch(err){state.syncNote=err.message;alertText("Synchronisation : "+err.message);}
 }
 function patchStatus(next){
  const id=state.selected;
@@ -298,20 +326,39 @@ async function perform(action,value){
  }
  if(action==="publishWatch"){
   if(!state.watchPreview)throw Error("Prévisualise d'abord la structure.");
+  if(!state.connected&&!DEMO)throw Error("Connecte Intervals.icu pour publier cette séance.");
   if(!confirm(state.connected?"Publier réellement cette séance dans ton calendrier Intervals.icu ?":"Simuler cet envoi (aucune écriture réelle) ?"))return;
-  const d=await api("/workouts/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(state.watch)});
-  state.sheet=null;state.watchPreview=null;alertText(d.message||"Envoi traité.");return;
+  const d=await api("/workouts/publish",{method:"POST",body:JSON.stringify(state.watch)});
+  state.watchSuccess={event:d.event,structured:!!d.event?.structured,message:d.message,real:!d.simulated};
+  state.sheet=null;state.watchPreview=null;state.tab="profile";draw();
+  alertText(d.message||"Envoi traité.");return;
  }
+ if(action==="goLive"){location.href="/runna-next/index.html";return;}
  if(action==="connectNow"){
-  const origin=new URL($("apiUrl").value.trim()),token=$("apiToken").value.trim();
-  if(origin.protocol!=="https:"||!origin.hostname.endsWith(".workers.dev")||origin.hostname==="hevy-garmin-coach.planetpizza.workers.dev"||origin.pathname!=="/"||origin.search||origin.hash)throw Error("Utilise un Preview HTTPS Cloudflare, jamais la production.");
-  if(token.length<12)throw Error("Jeton de préproduction trop court.");
-  state.apiOrigin=origin.origin;state.apiToken=token;state.connected=true;
-  try{const data=await api("/status");if(!data.ok||!data.intervals?.configured)throw Error("Intervals.icu non configuré sur ce Preview.");}
-  catch(error){state.apiOrigin=null;state.apiToken=null;state.connected=false;throw error;}
-  state.sheet=null;state.tab="activities";await sync();return;
+  if(DEMO)throw Error("Ouvre la version active avant de connecter Intervals.icu.");
+  const key=$("apiToken").value.trim(),pass=$("apiVaultPass").value;
+  if(!/^[a-zA-Z0-9_-]{12,300}$/.test(key))throw Error("Clé API invalide. Recopie la clé depuis Intervals.icu → Developer Settings.");
+  const previous=state.apiToken;state.apiToken=key;state.connected=true;
+  try{const status=await api("/status");if(!status?.ok||!status?.intervals?.ok)throw Error("Authentification non confirmée.");}
+  catch(error){state.connected=!!previous;state.apiToken=previous;throw error;}
+  if(pass){const encrypted=await encryptApiKey(key,pass);localStorage.setItem(KEY_VAULT,encrypted);}
+  state.sheet=null;state.tab="activities";await sync();alertText("Compte Intervals.icu connecté. Tu peux maintenant publier tes séances.");return;
  }
- if(action==="disconnect"){state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode="demo";state.sheet=null;await sync();return;}
+ if(action==="unlockNow"){
+  if(DEMO)throw Error("Ouvre la version active.");
+  const vault=localStorage.getItem(KEY_VAULT);if(!vault)throw Error("Aucune clé sauvegardée sur cet iPhone.");
+  const pass=$("apiUnlockPass").value;
+  const key=await decryptApiKey(vault,pass);
+  state.apiToken=key;state.connected=true;
+  try{const status=await api("/status");if(!status?.ok)throw Error("Connexion non confirmée.");}
+  catch(error){state.connected=false;state.apiToken=null;throw error;}
+  state.sheet=null;state.tab="activities";await sync();alertText("Connexion Intervals.icu déverrouillée.");return;
+ }
+ if(action==="disconnect"){
+  state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode=DEMO?"demo":"disconnected";
+  state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.sheet=null;
+  localStorage.removeItem(KEY_VAULT);draw();if(DEMO)await sync();return;
+ }
  }catch(error){const msg=error?.message||"Action impossible";if(state.wizard&&$("wizardError")){$("wizardError").hidden=false;$("wizardError").textContent=msg;}else alertText(msg);}
 }
 document.addEventListener("click",ev=>{
@@ -326,7 +373,7 @@ function start(){
  if(DEMO&&!state.plan){
   try{state.plan=generateRunningPlan(sample(),today());state.week=0;}catch{}
  }
- draw();sync();
+ draw();if(DEMO)sync();
 }
 start();
 if ("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
