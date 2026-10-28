@@ -39,6 +39,7 @@ jobs:
           node --check web/runna-next/kintra-coach.mjs
           node --check web/runna-next/kintra-coach-v2.mjs
           node --check web/runna-next/local-backup.mjs
+          node --check web/runna-next/secure-backup.mjs
           node --check web/runna-next/gpx-export.mjs
           node --check web/runna-next/kintra-hub.mjs
           node --check web/runna-next/kintra-weather.mjs
