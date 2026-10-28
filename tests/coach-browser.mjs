@@ -11,16 +11,35 @@ try{
  await page.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded",timeout:40000});
  await page.locator(".nav button[data-action='tab:plan']").waitFor({timeout:15000});
  assert.match(await page.locator("#app").innerText(),/Objectif 10 km/);
+ const visual=await page.evaluate(()=>{
+  const root=getComputedStyle(document.documentElement);
+  const primary=getComputedStyle(document.querySelector(".btn")).backgroundColor;
+  const hero=getComputedStyle(document.querySelector(".hero")).backgroundImage;
+  const theme=document.querySelector('meta[name="theme-color"]').getAttribute("content");
+  const bar=document.querySelector(".training .strip");
+  return {accent:root.getPropertyValue("--accent").trim(),
+   strong:root.getPropertyValue("--accent-strong").trim(),
+   background:root.getPropertyValue("--bg").trim(),
+   primary,hero,theme,sessionColor:bar?getComputedStyle(bar).backgroundColor:null};
+ });
+ assert.deepEqual([visual.accent,visual.strong,visual.background,visual.theme],
+  ["#ff7c89","#cd2f47","#100c12","#100c12"]);
+ assert.match(visual.primary,/205,\s*47,\s*71/);
+ assert.ok(visual.hero.includes("linear-gradient"),"Burgundy hero gradient expected");
+ assert.ok(visual.sessionColor?.startsWith("rgb("),"Colored workout strip expected");
+ console.log("PASS: red/burgundy brand and meaningful coral training colors.",visual);
+
  await mkdir("test-artifacts",{recursive:true});
- await page.screenshot({path:"test-artifacts/coach-accueil-mobile.png",fullPage:true});
+ await page.screenshot({path:"test-artifacts/coach-rouge-accueil-mobile.png",fullPage:true});
  console.log("PASS: Runna-like Today entry with 10km demo goal.");
  await page.locator(".nav button[data-action='tab:plan']").click();
  await page.locator(".training[data-action^='session:']").first().waitFor();
  assert.match(await page.locator("#app").innerText(),/Les séances de la semaine/);
- await page.screenshot({path:"test-artifacts/coach-programme-mobile.png",fullPage:true});
+ await page.screenshot({path:"test-artifacts/coach-rouge-programme-mobile.png",fullPage:true});
  console.log("PASS: Week plan and session rows.");
  await page.locator(".training[data-action^='session:']").first().click();
  assert.match(await page.locator("#app").innerText(),/Détail de la séance/);
+ await page.screenshot({path:"test-artifacts/coach-rouge-fiche-seance-mobile.png",fullPage:true});
  await page.locator("button[data-action='back']").click();
  console.log("PASS: Session details and return.");
  await page.locator(".nav button[data-action='tab:profile']").click();
