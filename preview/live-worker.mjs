@@ -66,7 +66,8 @@ async function dashboard(request,key){
   period:{days,start:day(-days),end:day()},activities:[...unique.values()].sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt))),
   planned:get(1).map(normalizeEvent),
   wellness:get(2).map(x=>({date:String(x.id||x.date||""),hrv:num(x.hrv),restingHR:num(x.restingHR),
-    sleepSecs:num(x.sleepSecs),weight:num(x.weight),steps:num(x.steps),ctl:num(x.ctl),atl:num(x.atl)})),
+    sleepSecs:num(x.sleepSecs),sleepScore:num(x.sleepScore),sleepQuality:num(x.sleepQuality),
+    soreness:num(x.soreness),fatigue:num(x.fatigue),weight:num(x.weight),steps:num(x.steps),ctl:num(x.ctl),atl:num(x.atl)})),
   strength:[...unique.values()].filter(a=>a.category==="Musculation"),warnings,sources:{intervals:{ok:results[0].status==="fulfilled"},calendar:{ok:results[1].status==="fulfilled"},
     wellness:{ok:results[2].status==="fulfilled"},hevy:{ok:false,configured:false}}});
 }
