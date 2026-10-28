@@ -1,0 +1,25 @@
+name: TrainSync v3 checks
+on:
+  pull_request:
+    paths:
+      - "Backend/worker-v30.js"
+      - "Backend/running-workouts.mjs"
+      - "web/trainsync-v3.js"
+      - "tests/**"
+      - ".github/workflows/trainsync-v3-checks.yml"
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax checks
+        run: |
+          node --check web/trainsync-v3.js
+          node --check Backend/worker-v30.js
+          node --check Backend/running-workouts.mjs
+      - name: Workout generation unit tests
+        run: node --test tests/trainsync-v3.test.mjs
