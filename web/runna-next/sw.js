@@ -1,10 +1,14 @@
-// TrainSync Coach standalone PWA. Cache only static public assets; never cache any workout API or health data.
-const CACHE = "trainsync-coach-ui-4";
+// KINTRA standalone PWA. Cache only static public assets; never cache any workout API or health data.
+const CACHE = "kintra-ui-5";
 const STATIC = [
   "./index.html",
-  "./app.css?v=3",
-  "./app.mjs?v=4",
+  "./app.css?v=5",
+  "./app.mjs?v=5",
   "./manifest.webmanifest",
+  "./kintra-icon.svg",
+  "./kintra-logo.svg",
+  "./kintra-coach.mjs",
+  "./kintra-hub.mjs",
   "./credentials.mjs",
   "./after-run.mjs",
   "./workout-reconciliation.mjs",
@@ -14,7 +18,7 @@ self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting()));
 });
 self.addEventListener("activate",event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("trainsync-coach-ui-")&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith("trainsync-coach-ui-")||k.startsWith("kintra-ui-"))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener("fetch",event=>{
   const request=event.request;if(request.method!=="GET")return;
