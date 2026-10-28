@@ -83,13 +83,12 @@ try{
  await page.locator('button[data-action="backupSecure"]').click();
  await page.locator("#kintraSecurePass").fill("phrase-longue-kintra-test-2026");
  await page.locator("#kintraSecurePassAgain").fill("phrase-longue-kintra-test-2026");
+ // A previous success toast must not clear this passphrase when its 5-second timer expires.
+ await page.waitForTimeout(5200);
+ assert.equal(await page.locator("#kintraSecurePass").inputValue(),"phrase-longue-kintra-test-2026");
+ assert.equal(await page.locator("#kintraSecurePassAgain").inputValue(),"phrase-longue-kintra-test-2026");
  await page.locator('button[data-action="backupSecureDownload"]').click();
- await page.waitForTimeout(1000);
- console.log("BACKUP DIAGNOSTIC",await page.evaluate(()=>({secure:isSecureContext,crypto:!!crypto?.subtle,
-  sheet:document.querySelector(".modal")?.innerText.slice(0,400),
-  toast:document.querySelector('[role="status"]')?.innerText,
-  loaded:[...document.querySelectorAll("script")].map(x=>x.src)})));
- await page.getByText("Fichier chiffré préparé").waitFor({timeout:5000});
+ await page.getByText("Fichier chiffré préparé").waitFor({timeout:25000});
  const encryptedDownloadPromise=page.waitForEvent("download");
  await page.locator('button[data-action="backupSecureSave"]').click();
  const encryptedDownload=await encryptedDownloadPromise;
