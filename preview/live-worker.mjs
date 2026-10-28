@@ -22,7 +22,7 @@ async function fetchIntervals(key,path,options={}){
  const timer=setTimeout(()=>controller.abort(),17000);
  try{
   const res=await fetch(target,{method:options.method||"GET",signal:controller.signal,
-   headers:{Authorization:"Basic "+auth,Accept:"application/json","User-Agent":"Mozilla/5.0 (compatible; TrainSyncCoach/3.2)",...(options.body?{"Content-Type":"application/json"}:{})},
+   headers:{Authorization:"Basic "+auth,Accept:"application/json","User-Agent":"Mozilla/5.0 (compatible; KINTRA/1.0)",...(options.body?{"Content-Type":"application/json"}:{})},
    ...(options.body?{body:options.body}:{})});
   const payload=await parseJsonResponse(res);
   if(!res.ok)throw Object.assign(new Error(res.status===401||res.status===403?"Clé Intervals.icu invalide ou accès refusé.":"Intervals.icu a refusé la requête (HTTP "+res.status+")."),{status:res.status===401||res.status===403?401:502});
@@ -67,7 +67,7 @@ async function dashboard(request,key){
   planned:get(1).map(normalizeEvent),
   wellness:get(2).map(x=>({date:String(x.id||x.date||""),hrv:num(x.hrv),restingHR:num(x.restingHR),
     sleepSecs:num(x.sleepSecs),weight:num(x.weight),steps:num(x.steps),ctl:num(x.ctl),atl:num(x.atl)})),
-  strength:[],warnings,sources:{intervals:{ok:results[0].status==="fulfilled"},calendar:{ok:results[1].status==="fulfilled"},
+  strength:[...unique.values()].filter(a=>a.category==="Musculation"),warnings,sources:{intervals:{ok:results[0].status==="fulfilled"},calendar:{ok:results[1].status==="fulfilled"},
     wellness:{ok:results[2].status==="fulfilled"},hevy:{ok:false,configured:false}}});
 }
 // Runna-like post-run interval analysis, read-only and restricted to one named activity.
@@ -97,6 +97,7 @@ async function activityIntervals(request,key){
 async function publish(request,key){
  const data=await request.json();
  const workout=buildRunningWorkout(data,day());
+ workout.name=workout.name.replace(/^TrainSync/,"KINTRA");
  const date=workout.start_date_local.slice(0,10);
  const existing=await fetchIntervals(key,"/events?oldest="+date+"&newest="+date+"&category=WORKOUT");
  const hit=(Array.isArray(existing)?existing:[]).find(x=>x.external_id===workout.external_id);
@@ -129,6 +130,7 @@ export default {
    }
    if(u.pathname==="/v3/workouts/preview"&&request.method==="POST"){
      const workout=buildRunningWorkout(await request.json(),day());
+     workout.name=workout.name.replace(/^TrainSync/,"KINTRA");
      return json({ok:true,demo:false,preview:{...workout,note:"Vérifie que les zones Pace ou HR sont réglées dans Intervals.icu avant l'envoi vers Apple Watch."}});
    }
    const key=mustKey(request);
