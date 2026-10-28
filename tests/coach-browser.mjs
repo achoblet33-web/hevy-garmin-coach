@@ -13,7 +13,8 @@ try{
  assert.match(await page.locator("#app").innerText(),/Objectif 10 km/);
  const visual=await page.evaluate(()=>{
   const root=getComputedStyle(document.documentElement);
-  const primary=getComputedStyle(document.querySelector(".btn")).backgroundColor;
+  const primaryButton=document.createElement("button");primaryButton.className="btn";document.body.appendChild(primaryButton);
+  const primary=getComputedStyle(primaryButton).backgroundColor;primaryButton.remove();
   const hero=getComputedStyle(document.querySelector(".hero")).backgroundImage;
   const theme=document.querySelector('meta[name="theme-color"]').getAttribute("content");
   const bar=document.querySelector(".training .strip");
