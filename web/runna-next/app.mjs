@@ -165,8 +165,12 @@ function profileView(){
 function detailView(x){
  const steps=workoutDescription(x);
  const past=x.date<today();
- return `<div class="detailsHeader"><div class="between"><span class="eyebrow">${fmt(x.date)} · ${e(x.phase||"Séance")}</span><span class="pill muted">${x.status==="done"?"Terminée":x.status==="skipped"?"Ignorée":"Prévue"}</span></div>
- <h2>${e(x.title)}</h2><p class="sub">${km(x.distanceKm)} km · ${e(x.intensity||"Allure confortable")}</p><div class="badgeLine"><span class="pill">${e(labels[x.kind]||"Course")}</span><span class="pill muted">${state.plan?.profile?.distanceKm||"—"} km objectif</span></div></div>
+ const metrics=evaluateSportContext({activities:state.activities,wellness:state.wellness,strength:state.strength,date:today()});
+ const caution=metrics.warnings.filter(w=>!/insuffisant/i.test(w));
+ return `<div class="detailsHeader kintra-session-header"><div class="between"><span class="eyebrow">${fmt(x.date)} · ${e(x.phase||"Séance")}</span><span class="pill muted">${x.status==="done"?"Terminée":x.status==="skipped"?"Ignorée":"Prévue"}</span></div>
+ <h2>${e(x.title)}</h2><p class="sub">${km(x.distanceKm)} km · ${e(x.intensity||"Allure confortable")}</p><div class="badgeLine"><span class="pill">${e(labels[x.kind]||"Course")}</span><span class="pill muted">${state.plan?.mode==="maintenance"?"Mode maintien":(state.plan?.profile?.distanceKm||"—")+" km objectif"}</span></div></div>
+ <div class="kintra-session-context"><strong>${state.adaptiveSuggestions?"◉ Conseil adapté à tes données":"◉ Conseils adaptatifs désactivés"}</strong>
+ <p class="sub">${state.adaptiveSuggestions?(caution.length?e(caution[0])+" Vérifie ton ressenti avant une intensité élevée.":"Aucun signal d'alerte exploitable. Adapte l'allure à ton ressenti : le plan n'est pas modifié automatiquement."):"Active les conseils depuis Coach pour consulter des recommandations contextuelles."}</p></div>
  <div class="card"><h3 class="heading">Détail de la séance</h3>
  ${steps.map((s,i)=>`<div class="step"><div class="number">${i+1}</div><div><strong>${e(s.name)}</strong><small>${e(s.value)}</small></div></div>`).join("")}
  <div class="callout">Pourquoi cette séance ?<br>${e(x.reason||"Développer progressivement les capacités de course.")}</div></div>
@@ -175,7 +179,7 @@ function detailView(x){
  <div class="actions"><button class="btn ghost" data-action="feedback">Donner mon ressenti</button><button class="btn ghost" data-action="move">Déplacer</button></div></div>
  ${x.exportable?`<div class="card"><h3 class="heading">Courir avec l'Apple Watch</h3><p class="sub">Préparer une séance structurée dans Intervals.icu. Companion transmet ensuite la séance à l'application Exercice.</p>
  <div class="warning">La structure d'export (durées, répétitions et zones) peut nécessiter un ajustement. La distance prévue du programme ne garantit pas une correspondance exacte avec l'export.</div>
- <div class="actions"><button class="btn full" data-action="watch">Préparer pour l'Apple Watch ↗</button></div></div>`:""}`;
+ <div class="actions"><button class="btn full" data-action="watch">Envoyer vers Apple Watch ↗</button></div></div>`:""}`;
 }
 function renderWizard(){
  const f=state.form,s=state.step;
