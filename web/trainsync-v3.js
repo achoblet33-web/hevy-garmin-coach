@@ -3,6 +3,20 @@
 (() => {
   const GOAL_KEY = "trainsync-v3-running-goal";
   let dashboard = null, preview = null, requestBusy = false;
+  const DEMO = new URLSearchParams(location.search).get("demo") === "1";
+  async function requestV3(path, options = {}, timeout = 20000) {
+    if (!DEMO) return apiRequest(path, options, timeout);
+    // Preview is strictly synthetic: no tokens, health data or production requests.
+    const response = await fetch(path, {
+      method: options.method || "GET",
+      headers: { ...(options.body ? { "Content-Type": "application/json" } : {}) },
+      ...(options.body ? { body: options.body } : {}),
+      cache: "no-store",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Prévisualisation indisponible.");
+    return data;
+  }
   const byId = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   const nf = (n, digits = 1) => Number.isFinite(Number(n)) ? Number(n).toLocaleString("fr-FR", { maximumFractionDigits: digits }) : "—";
@@ -79,8 +93,8 @@
     const fatigue=legFatigue(dashboard.strength); byId("ts3Legs").innerHTML=`<strong>${esc(fatigue.label)}</strong><div>${fatigue.detail}</div>`;
     const source=dashboard.sources;
     const ok=source.intervals?.ok && source.calendar?.ok;
-    byId("ts3Source").textContent=ok?"Intervals connecté":"Synchronisation partielle";
-    byId("ts3SyncNote").textContent=(dashboard.warnings || []).length?dashboard.warnings.join(" · "):"Intervals.icu : source de référence running, activités et calendrier. Hevy : détail des séries.";
+    byId("ts3Source").textContent=dashboard.demo?"DÉMO · aucune donnée réelle":(ok?"Intervals connecté":"Synchronisation partielle");
+    byId("ts3SyncNote").textContent=dashboard.demo?"Simulation publique isolée : aucune information personnelle et aucune connexion au compte Intervals.icu.":((dashboard.warnings || []).length?dashboard.warnings.join(" · "):"Intervals.icu : source de référence running, activités et calendrier. Hevy : détail des séries.");
     const plans=dashboard.planned.slice().sort((a,b)=>a.date.localeCompare(b.date)).filter(a=>a.date>=localDay(-1)).slice(0,8);
     byId("ts3Calendar").innerHTML=plans.length?plans.map(e=>`<div class="ts3-entry"><div><strong>${esc(e.title)}</strong><small>${esc(e.type)} · ${e.structured?"structurée":"structure non confirmée"}</small></div><small>${dateFr(e.date)}</small></div>`).join(""):"Aucune séance à venir dans le calendrier interrogé.";
     byId("ts3Activities").innerHTML=runs.slice(0,8).map(a=>`<div class="ts3-entry"><div><strong>${esc(a.title)}</strong><small>${dateFr(a.startedAt)} · ${nf(a.distanceKm)} km · ${a.durationMinutes ?? "—"} min</small></div><small>${a.averageHeartRate == null?"—":Math.round(a.averageHeartRate)+" bpm"}</small></div>`).join("")||"Aucune course sur la période. Active la synchronisation Apple Santé → Intervals.icu dans Companion.";
@@ -89,9 +103,9 @@
     const button=byId("ts3Refresh"); if(!button || requestBusy)return;
     requestBusy=true;button.disabled=true;button.textContent="Récupération en cours…";
     try {
-      const status=await apiRequest("/v3/status");
+      const status=await requestV3("/v3/status");
       if(!status.intervals?.configured)throw Error("Clés Intervals.icu absentes du Worker Cloudflare.");
-      const data=await apiRequest("/v3/dashboard?days=90",{},65000);
+      const data=await requestV3("/v3/dashboard?days=90",{},65000);
       if(!Array.isArray(data.activities))throw Error("Le serveur n'a pas renvoyé d'activités exploitables.");
       dashboard=data;render();
       const msg=(data.warnings||[]).length?"Données partiellement synchronisées. Vérifie le détail des sources.":"Données sportives actualisées.";
@@ -114,7 +128,7 @@
   async function makePreview(event){
     event.preventDefault();const btn=byId("ts3PreviewButton");btn.disabled=true;preview=null;byId("ts3Publish").disabled=true;
     try {
-      const data=await apiRequest("/v3/workouts/preview",{method:"POST",body:JSON.stringify(inputWorkout())});
+      const data=await requestV3("/v3/workouts/preview",{method:"POST",body:JSON.stringify(inputWorkout())});
       if(!data.ok||!data.preview)throw Error("Prévisualisation indisponible.");
       preview={...data.preview,inputs:inputWorkout()};
       byId("ts3Preview").innerHTML=`<p class="ts3-muted"><strong>${esc(preview.name)}</strong> · ${dateFr(preview.start_date_local)} · ${esc(preview.note)}</p><pre class="ts3-code">${esc(preview.description)}</pre>`;
@@ -127,15 +141,15 @@
     if(!confirm(`Créer ${preview.name} le ${preview.inputs.date} dans ton calendrier Intervals.icu ?`))return;
     requestBusy=true;const btn=byId("ts3Publish");btn.disabled=true;btn.textContent="Envoi…";
     try {
-      const res=await apiRequest("/v3/workouts/publish",{method:"POST",body:JSON.stringify(preview.inputs)},35000);
+      const res=await requestV3("/v3/workouts/publish",{method:"POST",body:JSON.stringify(preview.inputs)},35000);
       byId("ts3PublishMessage").textContent=res.message||"Réponse non renseignée.";
-      if(res.event?.structured)byId("ts3PublishMessage").textContent+=" Étapes structurées confirmées côté Intervals.icu.";
+      if(res.event?.structured && !res.simulated)byId("ts3PublishMessage").textContent+=" Étapes structurées confirmées côté Intervals.icu.";
       preview=null;await refreshAfterPublish();
     }catch(error){byId("ts3PublishMessage").textContent=error.message;if(typeof showStatus==="function")showStatus(error.message,true);}
     finally{requestBusy=false;btn.textContent="Publier dans Intervals.icu";}
   }
   async function refreshAfterPublish() {
-    try {dashboard=await apiRequest("/v3/dashboard?days=90",{},65000);render();}catch{}
+    try {dashboard=await requestV3("/v3/dashboard?days=90",{},65000);render();}catch{}
   }
   function saveGoal(){
     const date=byId("ts3GoalDate").value, time=byId("ts3GoalTime").value.trim();
@@ -159,7 +173,8 @@
     byId("ts3WorkoutForm").addEventListener("submit",makePreview);byId("ts3Publish").addEventListener("click",publish);
     byId("ts3SaveGoal").addEventListener("click",saveGoal);byId("ts3Refresh").addEventListener("click",refresh);
     if(typeof activateView==="function")activateView("performance");
-    if(typeof settings!=="undefined" && settings.relayToken)refresh();
+    if(DEMO) { byId("ts3PublishMessage").textContent="MODE DÉMONSTRATION : prévisualisation et publication simulées, sans aucune action sur Intervals.icu ni Apple Watch."; document.querySelector(".ts3-hero p").textContent="DÉMONSTRATION ISOLÉE : aucune donnée sportive réelle. Test du générateur, sans Cloudflare ni Intervals.icu personnels."; }
+    if(DEMO || (typeof settings!=="undefined" && settings.relayToken))refresh();
     else byId("ts3SyncNote").textContent="Renseigne ton APP_TOKEN dans Réglages pour connecter le Worker. Aucune clé Intervals.icu n'est demandée dans la PWA.";
   }
   document.addEventListener("DOMContentLoaded",start);
