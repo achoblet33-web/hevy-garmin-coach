@@ -62,6 +62,17 @@ try{
  assert.match(await page.locator("#app").innerText(),/Progression/);
  assert.match(await page.locator("#app").innerText(),/Données fictives/);
  console.log("PASS: Analytics honestly labelled demo.");
+ await page.locator('button[data-action^="activity:"]').first().click();
+ await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
+ assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
+ await page.getByText("DÉMO · Échauffement").waitFor({timeout:12000});
+ await page.locator('button[data-action="activityFeedback"]').click();
+ await page.locator("#runRpe").selectOption("7");
+ await page.locator("#runNote").fill("Séance contrôlée et ressenti noté.");
+ await page.locator('button[data-action="saveActivityFeedback"]').click();
+ assert.match(await page.locator("#app").innerText(),/Difficulté : 7\/10/);
+ await page.locator('button[data-action="backActivity"]').click();
+ console.log("PASS: post-run report, fake lap segments and local RPE feedback.");
  await page.locator(".nav button[data-action='tab:today']").click();
  await page.locator("button[data-action='instant']").click();
  await page.locator("button[data-action='instantType:interval']").click();
