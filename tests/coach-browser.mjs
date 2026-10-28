@@ -163,7 +163,7 @@ try{
  await active.locator('.modal').waitFor({state:"hidden",timeout:8000});
  assert.match(await active.locator("#app").innerText(),/Hevy Pro connecté/);
  await active.locator('.nav button[data-action="tab:today"]').click();
- assert.match(await active.locator("#app").innerText(),/MUSCULATION/);
+ assert.match(await active.locator('[data-testid="weekly-training-tiles"]').innerText(),/HEVY PRO/);
  await active.screenshot({path:"test-artifacts/kintra-hevy-accueil-mobile.png",fullPage:true});
  console.log("PASS: Hevy Pro personal API integration works without Intervals connected (mocked API only).");
  await active.close();
