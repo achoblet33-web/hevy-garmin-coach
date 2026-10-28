@@ -154,3 +154,9 @@ a,.textButton{color:#9f163a}
 .kintra-mode-picker button:focus-visible,.kintra-toggle:focus-visible{
  outline:3px solid #9d1e49;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.kintra-toggle,.kintra-toggle span{transition:none}}
+
+.kintra-strength-review .heading{margin:8px 0}
+.kintra-strength-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.kintra-strength-grid>div{background:#fdf2f5;border:1px solid #f4e1e7;border-radius:12px;padding:13px}
+.kintra-strength-grid strong{display:block;color:#7b1537;font-size:23px}
+.kintra-strength-grid small{font-size:11px;color:#997586}
