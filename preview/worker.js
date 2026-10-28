@@ -36,6 +36,15 @@ export default {
         {index:3,label:"DÉMO · Récupération",durationSeconds:120,distanceMeters:210,averageHeartRate:142,averagePaceMinKm:9.52}
       ]});
   }
+  if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/detail$/.test(u.pathname) && request.method==="GET"){
+    // Synthetic demo GPS only, never displayed as a real athlete route.
+    const points=[[45.7505,4.8375],[45.751,4.8408],[45.7523,4.8455],
+      [45.7548,4.8475],[45.7559,4.844],[45.753,4.8403],[45.7505,4.8375]];
+    return asJson({ok:true,demo:true,source:"DÉMO · synthétique",note:"Tracé GPS fictif de démonstration, sans lien avec une activité réelle.",
+      detail:{elevationGain:85,elevationLoss:82,maxSpeedKmh:13.5,averageCadence:172,maxHeartRate:169,
+        power:245,movingMinutes:42,elapsedMinutes:45},
+      route:{points,hasGps:true,count:points.length,sourcePoints:points.length}});
+  }
   if((u.pathname==="/v3/workouts/preview" || u.pathname==="/v3/workouts/publish") && request.method==="POST"){
     try {
       const body=await request.json();
