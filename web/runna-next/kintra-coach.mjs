@@ -25,14 +25,15 @@ export function generateMaintenancePlan(input,date){
   preferred.push(next);
  }
  const days=preferred.sort((a,b)=>a-b);
- const quality=frequency>=3&&weeklyKm>=15?days.filter(x=>x!==longDay).sort((a,b)=>distance(b,longDay)-distance(a,longDay))[0]:null;
+ const focus=["balance","endurance","speed"].includes(input.maintenanceFocus)?input.maintenanceFocus:"balance";
+ const quality=focus!=="endurance"&&frequency>=3&&weeklyKm>=15?days.filter(x=>x!==longDay).sort((a,b)=>distance(b,longDay)-distance(a,longDay))[0]:null;
  const start=monday(date),sessions=[],summary=[];
  const level=String(input.maintenanceFocus||"balance");
  const allowed=["balance","endurance","speed"].includes(level)?level:"balance";
  for(let w=0;w<4;w++){
   const volume=round(weeklyKm*(w===3?.82:w===2?1.03:1),1);
   const phase=w===3?"Assimilation":"Entretien";
-  const longPart=frequency===2?.42:.33;
+  const longPart=frequency===2?.42:focus==="endurance"?.39:.33;
   const longKm=round(Math.min(volume*longPart,Math.max(12,weeklyKm*.5)),1);
   const rest=volume-longKm;
   const qualityKm=quality!==null?round(Math.min(rest*.4,Math.max(3,volume*.2)),1):0;
@@ -64,8 +65,9 @@ export function evaluateSportContext({activities=[],wellness=[],strength=[],date
  if(!textDate(date))throw Error("Date de référence invalide.");
  const sorted=[...wellness].filter(x=>x&&x.date<=date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  const recent=sorted.slice(0,7);
- const last=recent[0]||{};
- const sleep=number(last.sleepSecs),hrv=number(last.hrv),rhr=number(last.restingHR),ctl=number(last.ctl),atl=number(last.atl);
+ const latest=recent[0]||{};
+ const last=latest.date>=add(date,-1)?latest:{};
+ const sleep=number(last.sleepSecs),hrv=number(last.hrv),rhr=number(last.restingHR),ctl=number(last.ctl),atl=number(last.atl),sleepScore=number(last.sleepScore),sleepQuality=number(last.sleepQuality);
  const run=activities.filter(x=>x.category==="Course");
  const recentRuns=run.filter(x=>String(x.startedAt||"").slice(0,10)>=add(date,-6)&&String(x.startedAt||"").slice(0,10)<=date);
  const baselineRuns=run.filter(x=>String(x.startedAt||"").slice(0,10)>=add(date,-34)&&String(x.startedAt||"").slice(0,10)<add(date,-6));
@@ -86,7 +88,7 @@ export function evaluateSportContext({activities=[],wellness=[],strength=[],date
   return d>=add(date,-2)&&d<=date&&(x.category==="Musculation"||x.source==="Hevy"||x.exercises?.length);
  }).some(x=>Array.isArray(x.exercises)&&x.exercises.some(z=>/squat|deadlift|soulev|fente|lunge|leg press|leg curl|hip thrust/i.test(z.title||z.name||"")));
  if(recentLeg)warning.push("Séance jambes récente détectée : vérifier les courbatures avant une séance intense.");
- return {sleepHours:sleep==null?null:round(sleep/3600,1),hrv,restingHR:rhr,ctl,atl,
+ return {sleepHours:sleep==null?null:round(sleep/3600,1),sleepSecs:sleep,sleepScore,sleepQuality,latestDate:last.date||null,hrv,restingHR:rhr,ctl,atl,
   weeklyKm,baselineKm,runCount:recentRuns.length,strengthCount:strength.filter(x=>String(x.startedAt||"").slice(0,10)>=add(date,-6)).length,
   warnings:warning,signalsAvailable:[sleep,hrv,rhr,ctl,atl].filter(x=>x!==null).length,grade:
   warning.some(x=>!/insuffisant/i.test(x))?"prudence":sorted.length>=5?"données partielles":"inconnu"};
@@ -102,4 +104,38 @@ export function recommendWorkout({plan,context,date,feeling=null}){
   reason:"Plusieurs signaux invitent à la prudence. Proposition à confirmer, sans modifier le plan automatiquement."};
  return {title:session.title,action:"keep",original:session,
   reason:context.signalsAvailable===0?"Données physiologiques absentes : adapte l'effort au ressenti.":"Séance prévue, à ajuster selon tes sensations."};
+}
+
+/**
+ * Explainable, non-clinical readiness guidance. No synthetic 0–100 index.
+ * Requires recent measured recovery data and a personal baseline to say "favorable".
+ */
+export function evaluateReadiness({activities=[],wellness=[],strength=[],date}={}){
+ const ctx=evaluateSportContext({activities,wellness,strength,date});
+ const goodDate=x=>typeof x?.date==="string"&&x.date<=date&&x.date>=add(date,-1);
+ const todayData=[...wellness].filter(goodDate).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
+ const sorted=[...wellness].filter(x=>x?.date&&x.date<todayData?.date&&x.date>=add(date,-21)).sort((a,b)=>b.date.localeCompare(a.date));
+ const numeric=x=>x==null||x===""||!Number.isFinite(Number(x))?null:Number(x);
+ const average=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+ const baselineHrv=sorted.map(x=>numeric(x.hrv)).filter(x=>x!==null&&x>0);
+ const baselineHR=sorted.map(x=>numeric(x.restingHR)).filter(x=>x!==null&&x>0);
+ const hrv=numeric(todayData?.hrv),rhr=numeric(todayData?.restingHR),sleep=numeric(todayData?.sleepSecs);
+ const baselineHrvMean=baselineHrv.length>=4?average(baselineHrv):null;
+ const baselineRhrMean=baselineHR.length>=4?average(baselineHR):null;
+ const signals=[];
+ if(sleep!=null)signals.push({name:"Sommeil",value:(sleep/3600).toFixed(1)+" h",status:sleep<6*3600?"attention":"observé",reason:sleep<6*3600?"Nuit courte enregistrée.":"Durée de sommeil enregistrée."});
+ if(hrv!=null)signals.push({name:"HRV",value:Math.round(hrv)+" ms",status:baselineHrvMean!=null&&hrv<baselineHrvMean*.8?"attention":baselineHrvMean!=null?"tendance":"sans référence",reason:baselineHrvMean==null?"Historique HRV encore trop court.":"Référence récente : "+Math.round(baselineHrvMean)+" ms."});
+ if(rhr!=null)signals.push({name:"FC repos",value:Math.round(rhr)+" bpm",status:baselineRhrMean!=null&&rhr>baselineRhrMean+7?"attention":baselineRhrMean!=null?"tendance":"sans référence",reason:baselineRhrMean==null?"Historique FC repos encore trop court.":"Référence récente : "+Math.round(baselineRhrMean)+" bpm."});
+ const exerciseWarnings=ctx.warnings.filter(x=>/Volume des sept|Séance jambes/.test(x));
+ const concerns=signals.filter(x=>x.status==="attention").length+exerciseWarnings.length;
+ const baselineOk=baselineHrvMean!==null||baselineRhrMean!==null;
+ const enough=signals.length>=2&&baselineOk;
+ const state=!todayData||signals.length===0?"insufficient":concerns>0?"caution":enough?"favorable":"limited";
+ return {state,
+   label:state==="favorable"?"Dynamique favorable":state==="caution"?"Récupération à surveiller":state==="limited"?"Tendance à confirmer":"Données insuffisantes",
+   summary:state==="favorable"?"Plusieurs tendances disponibles sont cohérentes; confirme avec tes sensations avant de courir.":
+   state==="caution"?"Certains signaux incitent à alléger ou différer l’intensité; ce n’est pas un diagnostic.":
+   "Connecte et synchronise davantage de nuits pour identifier ta tendance personnelle.",
+   signals,warning:exerciseWarnings,referenceDays:Math.max(baselineHR.length,baselineHrv.length),
+   freshness:todayData?.date||null,hasBaseline:baselineOk};
 }
