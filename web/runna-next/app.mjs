@@ -8,6 +8,7 @@ import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
 import {createPortableBackup,parsePortableBackup,MAX_BACKUP_BYTES} from "./local-backup.mjs";
+import {uniqueRunningActivities,findPotentialDuplicates} from "./workout-reconciliation.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -118,7 +119,10 @@ function planView(){
 function activitiesView(){
  const stats=statData();
  const runlist=state.activities.filter(x=>x.category==="Course").slice(0,25);
- const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
+ const possibleDuplicates=findPotentialDuplicates(state.activities);
+ const warning=(state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"")+
+ (possibleDuplicates.length?`<div class="card kintra-duplicate-warning" data-testid="possible-duplicates"><strong>${possibleDuplicates.length} possible(s) doublon(s) de courses</strong>
+ <p class="sub">Des enregistrements proches en date, durée et distance ont été détectés. Aucun entraînement n'est supprimé automatiquement. Vérifie tes sources Apple Santé / Intervals.icu avant de réimporter.</p></div>`:"");
  const tabs=`<div class="kintra-progress-tabs" role="group" aria-label="Analyse de progression">${[["summary","Résumé"],["splits","Splits"],["hr","Fréquence cardiaque"],["hevy","Hevy"]].map(([id,label])=>`<button class="${state.progressTab===id?"active":""}" data-action="progressTab:${id}">${label}</button>`).join("")}</div>`;
  if(state.progressTab==="hevy")return `<h2 class="pageTitle">Musculation Hevy Pro</h2>${tabs}${renderHevyWorkouts(state.hevySessions,!!state.hevyKey,state.hevyPartial)}`;
  if(state.progressTab==="splits")return `<h2 class="pageTitle">Progression</h2>${tabs}
@@ -446,7 +450,7 @@ async function sync(){
  if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=state.hevySessions||[];state.sourceMode="disconnected";draw();return;}
  try{
   const data=await api("/dashboard?days=90");
-  state.activities=Array.isArray(data.activities)?data.activities:[];
+  state.activities=uniqueRunningActivities(Array.isArray(data.activities)?data.activities:[]);
   state.intervalsStrength=Array.isArray(data.strength)?data.strength:[];
   state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
   state.wellness=Array.isArray(data.wellness)?data.wellness:[];
