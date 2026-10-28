@@ -100,7 +100,13 @@ try{
  await narrow.locator('button[data-action="weatherLocation"]').first().click();
  await narrow.locator("#weatherCity").fill("Ville");
  await narrow.locator('button[data-action="weatherSearch"]').click();
- await narrow.locator(".kintra-place-results strong").waitFor({state:"visible",timeout:10000});
+ await narrow.locator(".kintra-place-results strong").waitFor({state:"visible",timeout:10000}).catch(async error=>{
+   const diagnostic=await narrow.evaluate(()=>({htmlWidth:document.documentElement.scrollWidth,
+     viewport:innerWidth,modal:document.querySelector(".modal")?.innerText?.slice(0,600),
+     toast:document.querySelector('[role="status"]')?.innerText||null,
+     location:location.pathname}));
+   throw Error("Narrow city selection did not render: "+JSON.stringify(diagnostic)+"; "+error.message);
+ });
  const mobileBounds=await narrow.evaluate(()=>({
    width:innerWidth,scroll:document.documentElement.scrollWidth,
    modal:document.querySelector(".modal").getBoundingClientRect().width,
