@@ -1,7 +1,7 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
-import {generateMaintenancePlan} from "./kintra-coach.mjs";
+import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary} from "./kintra-hub.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
@@ -20,9 +20,9 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
-function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};}catch{}}
-function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback}));}catch{}}
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,hevyKey:null,hevySessions:[],intervalsStrength:[],watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:""};
+function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;}catch{}}
+function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions}));}catch{}}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
@@ -73,11 +73,23 @@ function emptyWelcome(){
  ${[["◎","Définis ton objectif","Distance, échéance et niveau actuel."],["▦","Retrouve ta semaine","Footings, fractionnés, sorties longues et repos."],["↗","Progresse après chaque course","Suivi et ajustements selon tes performances."]].map(x=>`<div class="row" style="margin:15px 0"><div class="iconTile">${x[0]}</div><div><strong>${x[1]}</strong><p class="sub">${x[2]}</p></div></div>`).join("")}</div>`;
 }
 function planView(){
- if(!state.plan)return emptyWelcome();
+ if(!state.plan)return `<h2 class="pageTitle">Ton coach KINTRA</h2>
+ <p class="sub">Choisis un mode : préparer un événement ou entretenir durablement ta forme.</p>
+ <div class="kintra-mode-picker">
+ <button data-action="startMode:event"><span>◎</span><strong>Objectif événement</strong><small>Plan avec échéance et affûtage</small></button>
+ <button data-action="startMode:maintenance"><span>↗</span><strong>Mode maintien</strong><small>Cycle flexible de 4 semaines</small></button></div>
+ <div class="card"><h3 class="heading">Programme intelligent</h3><p class="sub">Progression conservatrice, prise en compte des séances réalisées et des signaux de récupération lorsqu'ils sont disponibles. Chaque adaptation nécessite ton accord.</p></div>`;
  const p=state.plan,idx=Math.max(0,Math.min(state.week,p.totalWeeks-1)),w=p.summary[idx];
  const sessions=p.sessions.filter(x=>x.week===w.week);
  const done=sessions.filter(x=>x.status==="done").length;
- return `<h2 class="pageTitle">Mon programme</h2>${program()}
+ return `<h2 class="pageTitle">Ton coach KINTRA</h2>
+ <div class="kintra-mode-picker kintra-coach-switch">
+ <button class="${p.mode!=="maintenance"?"active":""}" data-action="startMode:event"><span>◎</span><strong>Objectif événement</strong><small>Course programmée</small></button>
+ <button class="${p.mode==="maintenance"?"active":""}" data-action="startMode:maintenance"><span>↗</span><strong>Mode maintien</strong><small>Entretenir ta forme</small></button></div>
+ ${program()}
+ <article class="kintra-coach-tip"><div class="between"><div><div class="eyebrow">COACH ADAPTATIF</div><strong>${state.adaptiveSuggestions?"Conseils contextuels activés":"Conseils contextuels désactivés"}</strong></div>
+ <button class="kintra-toggle ${state.adaptiveSuggestions?"on":""}" data-action="toggleAdvice" role="switch" aria-checked="${state.adaptiveSuggestions}" aria-label="Activer les conseils adaptatifs"><span></span></button></div>
+ <p class="sub">Analyse les informations disponibles et suggère de conserver, alléger ou reporter une séance. Le plan ne change jamais sans ton accord.</p></article>
  <div class="card"><div class="between"><span class="eyebrow">Semaine de course</span><button class="textButton" data-action="manage">Gérer mon plan</button></div>
  <div class="weekNav"><button data-action="week:-1">‹</button><div style="text-align:center"><strong>Semaine ${idx+1} / ${p.totalWeeks}</strong><small>${e(w.phase)} · ${w.plannedKm} km</small></div><button data-action="week:1">›</button></div>
  <div class="progress"><span style="width:${Math.round(done/Math.max(1,sessions.length)*100)}%"></span></div><p class="sub">${done} / ${sessions.length} séances déclarées réalisées</p></div>
@@ -401,6 +413,12 @@ async function perform(action,value){
  if(action==="back"){state.selected=null;draw();return;}
  if(action==="setup"){state.form={...sample(),...(state.plan?.profile||{}),mode:state.plan?.mode||state.plan?.profile?.mode||"event"};state.step=0;state.wizard=true;state.sheet=null;draw();return;}
  if(action==="distance"){state.form.distanceKm=Number(value);draw();return;}
+ if(action==="startMode"){
+   state.form={...sample(),...(state.plan?.profile||{}),mode:value==="maintenance"?"maintenance":"event"};
+   state.step=0;state.wizard=true;state.selected=null;state.sheet=null;draw();return;
+ }
+ if(action==="toggleAdvice"){state.adaptiveSuggestions=!state.adaptiveSuggestions;persist();draw();return;}
+ if(action==="progressTab"){state.progressTab=["summary","splits","hr"].includes(value)?value:"summary";draw();return;}
  if(action==="goalMode"){state.form.mode=value==="maintenance"?"maintenance":"event";draw();return;}
  if(action==="focus"){state.form.maintenanceFocus=["balance","endurance","speed"].includes(value)?value:"balance";draw();return;}
  if(action==="wizardBack"){if(state.step===0){state.wizard=false;}else state.step--;draw();return;}
