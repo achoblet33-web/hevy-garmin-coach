@@ -10,7 +10,7 @@ function forecastCard(weather){
  <button class="textButton" data-action="weather">Activer ›</button></div>`;
  return `<div class="kintra-weather"><div class="kintra-icon-tile">☀</div><div style="flex:1"><strong>Météo locale</strong>
  <p class="sub">${shown(weather.temperature)} °C · Ressenti ${shown(weather.apparent)} °C<br>
- Humidité ${shown(weather.humidity)} % · Vent ${shown(weather.wind)} km/h</p></div>
+ Humidité ${shown(weather.humidity)} % · Vent ${shown(weather.wind)} km/h</p><p class="sub" style="font-size:10px">Source : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a></p></div>
  <button class="textButton" data-action="weather">↻</button></div>`;
 }
 function readiness(context){
