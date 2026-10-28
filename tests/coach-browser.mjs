@@ -102,15 +102,19 @@ try{
  await narrow.close();
  console.log("PASS: 320px phone modal, long city result and native input text size stay responsive.");
 
+ await page.locator(".kintra-week-chart").waitFor();
+ assert.equal(await page.locator(".kintra-week-bar").count(),7);
  await page.screenshot({path:"test-artifacts/kintra-accueil-mobile.png",fullPage:true});
  console.log("PASS: Runna-like Today entry with 10km demo goal.");
  await page.locator(".nav button[data-action='tab:plan']").click();
  await page.locator(".training[data-action^='session:']").first().waitFor();
  assert.match(await page.locator("#app").innerText(),/Les séances de la semaine/);
+ await page.locator("[data-testid=coach-parameters]").waitFor();
  await page.screenshot({path:"test-artifacts/kintra-programme-mobile.png",fullPage:true});
  console.log("PASS: Week plan and session rows.");
  await page.locator(".training[data-action^='session:']").first().click();
  assert.match(await page.locator("#app").innerText(),/Détail de la séance/);
+ await page.locator(".kintra-session-metadata").waitFor();
  await page.screenshot({path:"test-artifacts/kintra-seance-mobile.png",fullPage:true});
  await page.locator("button[data-action='back']").click();
  console.log("PASS: Session details and return.");
@@ -154,6 +158,8 @@ try{
  assert.match(await page.locator("#app").innerText(),/Progression/);
  assert.match(await page.locator("#app").innerText(),/Données fictives/);
  console.log("PASS: Analytics honestly labelled demo.");
+ await page.locator("[data-testid=progress-feature]").waitFor();
+ await page.locator(".kintra-completed-stats").waitFor();
  await page.locator('button[data-action="progressTab:splits"]').click();
  assert.match(await page.locator("#app").innerText(),/Analyse des fractions/);
  await page.locator('button[data-action="progressTab:hr"]').click();
@@ -165,6 +171,7 @@ try{
  await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
  await page.getByText("DÉMO · Échauffement").waitFor({timeout:12000});
+ await page.locator(".kintra-laps-table").waitFor({timeout:12000});
  await page.locator('button[data-action="activityFeedback"]').click();
  await page.locator("#runRpe").selectOption("7");
  await page.locator("#runNote").fill("Séance contrôlée et ressenti noté.");
