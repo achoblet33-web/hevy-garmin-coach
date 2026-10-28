@@ -28,7 +28,7 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,backupEncryptedText:null,pairedRuns:{},linkCandidate:null};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,backupEncryptedText:null,backupReadyText:null,pairedRuns:{},linkCandidate:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;state.pairedRuns=saved.pairedRuns&&typeof saved.pairedRuns==="object"?saved.pairedRuns:{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{throw Error("Impossible de sauvegarder sur cet appareil (stockage saturé ou indisponible). Exporte une sauvegarde chiffrée puis libère de l’espace.");}}
 function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today(),pairedRuns:state.pairedRuns});}
@@ -303,6 +303,10 @@ function sheet(){
  <label>Confirmer la phrase secrète<input id="kintraSecurePassAgain" type="password" autocomplete="new-password" minlength="12" maxlength="256"></label></div>
  <div class="actions"><button class="btn full" data-action="backupSecureDownload">Chiffrer et enregistrer</button>
  <button class="btn secondary" data-action="close">Annuler</button></div>`;
+ if(sh==="backupSecureReady")body=`<h2>Fichier chiffré préparé</h2>
+ <p class="sub">Le chiffrement est terminé sur ton appareil. Appuie maintenant sur Télécharger pour enregistrer le fichier. N'oublie pas ta phrase secrète : elle n'est pas conservée par KINTRA.</p>
+ <div class="actions"><button class="btn full" data-action="backupSecureSave">Télécharger ma sauvegarde</button>
+ <button class="btn secondary" data-action="close">Annuler</button></div>`;
  if(sh==="backupUnlock")body=`<h2>Déverrouiller la sauvegarde</h2>
  <p class="sub">Ce fichier est chiffré. Sa phrase secrète sert uniquement à le déchiffrer dans ce navigateur. Aucun transfert réseau.</p>
  <label>Phrase secrète de sauvegarde<input id="kintraBackupUnlockPass" type="password" autocomplete="off"></label>
@@ -496,10 +500,16 @@ async function perform(action,value){
   if(password!==($("kintraSecurePassAgain")?.value||""))throw Error("Les deux phrases secrètes sont différentes.");
   const ciphertext=await encryptPortableBackup({plan:state.plan,history:state.versionHistory,
    feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,pairedRuns:state.pairedRuns},password);
-  const url=URL.createObjectURL(new Blob([ciphertext],{type:"application/json;charset=utf-8"}));
+  state.backupReadyText=ciphertext;state.sheet="backupSecureReady";draw();return;
+ }
+ if(action==="backupSecureSave"){
+  if(!state.backupReadyText)throw Error("Aucune sauvegarde chiffrée prête à télécharger.");
+  // User gesture remains active: important for Safari/iOS after costly PBKDF2 encryption.
+  const url=URL.createObjectURL(new Blob([state.backupReadyText],{type:"application/json;charset=utf-8"}));
   const a=document.createElement("a");a.href=url;a.download="KINTRA-sauvegarde-chiffree-"+today()+".json";
   document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-  state.sheet=null;draw();alertText("Sauvegarde chiffrée créée. Conserve ta phrase secrète séparément.");return;
+  state.backupReadyText=null;state.sheet=null;draw();
+  alertText("Sauvegarde chiffrée téléchargée. Conserve ta phrase secrète séparément.");return;
  }
  if(action==="backupUnlock"){
   if(!state.backupEncryptedText)throw Error("Aucun fichier chiffré à restaurer.");
@@ -679,7 +689,7 @@ async function perform(action,value){
   state.plan=state.draft;state.draft=null;state.week=0;state.chosenDay=today();state.sheet=null;state.tab="today";persist();draw();return;
  }
  if(action==="manage"||action==="adjust"||action==="history"||action==="connect"||action==="instant"){state.sheet=action;draw();return;}
- if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;state.backupEncryptedText=null;state.linkCandidate=null;draw();return;}
+ if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;state.backupEncryptedText=null;state.backupReadyText=null;state.linkCandidate=null;draw();return;}
  if(action==="calendar"){state.sheet=null;state.tab="plan";state.week=0;draw();return;}
  if(action==="status"){patchStatus(value);return;}
  if(action==="move"||action==="feedback"){state.sheet=action;draw();return;}
