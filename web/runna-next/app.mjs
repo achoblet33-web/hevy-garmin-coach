@@ -9,6 +9,7 @@ import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSu
 import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
 import {createPortableBackup,parsePortableBackup,MAX_BACKUP_BYTES} from "./local-backup.mjs";
 import {uniqueRunningActivities,findPotentialDuplicates} from "./workout-reconciliation.mjs";
+import {routeToGpx} from "./gpx-export.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -543,6 +544,18 @@ async function perform(action,value){
  if(action==="backHevy"){state.hevyFocus=null;state.tab="activities";draw();return;}
  if(action==="refreshHevy"){await syncHevy();alertText("Séances Hevy synchronisées.");return;}
  if(action==="showHevy"){state.tab="activities";state.progressTab="hevy";state.activityFocus=null;state.hevyFocus=null;draw();return;}
+ if(action==="exportGpx"){
+  const points=state.activityDetail?.route?.points;
+  if(!state.activityDetail?.route?.hasGps||!Array.isArray(points)||points.length<2)
+    throw Error("Aucun parcours GPS exploitable à exporter.");
+  const activity=state.activities.find(a=>String(a.externalId||a.id?.replace(/^intervals:/,""))===state.activityFocus);
+  const xml=routeToGpx(points,activity?.title||"Course KINTRA");
+  const url=URL.createObjectURL(new Blob([xml],{type:"application/gpx+xml;charset=utf-8"}));
+  const anchor=document.createElement("a");anchor.href=url;
+  anchor.download="KINTRA-parcours-"+(activity?.startedAt?.slice(0,10)||today())+".gpx";
+  document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  alertText("Tracé GPX exporté depuis les points enregistrés.");return;
+ }
  if(action==="mapTiles"){
   if(!state.activityDetail?.route?.hasGps)throw Error("Aucune trace GPS à afficher.");
   state.mapEnabled=!state.mapEnabled;draw();return;
