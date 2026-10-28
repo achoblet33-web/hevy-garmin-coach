@@ -92,7 +92,7 @@ try{
  console.log("PASS: 12-hour weather strip scrolls inside the tile without changing phone viewport.");
 
  console.log("PASS: separate readiness, sleep, workout, training counts and selectable city with 12h forecast.");
- const narrow=await browser.newPage({viewport:{width:320,height:700},deviceScaleFactor:2,isMobile:true,hasTouch:true,locale:"fr-FR"});
+ const narrow=await browser.newPage({viewport:{width:320,height:700},deviceScaleFactor:2,isMobile:true,hasTouch:true,locale:"fr-FR",serviceWorkers:"block"});
  await narrow.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
    body:JSON.stringify({ok:true,results:[{label:"Ville extrêmement longue dépassant la largeur des résultats de recherche, Région, Pays",latitude:14.61,longitude:-60.99}]})}));
  await narrow.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded"});
