@@ -22,7 +22,7 @@ async function fetchIntervals(key,path,options={}){
  const timer=setTimeout(()=>controller.abort(),17000);
  try{
   const res=await fetch(target,{method:options.method||"GET",signal:controller.signal,
-   headers:{Authorization:"Basic "+auth,Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{})},
+   headers:{Authorization:"Basic "+auth,Accept:"application/json","User-Agent":"Mozilla/5.0 (compatible; TrainSyncCoach/3.2)",...(options.body?{"Content-Type":"application/json"}:{})},
    ...(options.body?{body:options.body}:{})});
   const payload=await parseJsonResponse(res);
   if(!res.ok)throw Object.assign(new Error(res.status===401||res.status===403?"Clé Intervals.icu invalide ou accès refusé.":"Intervals.icu a refusé la requête (HTTP "+res.status+")."),{status:res.status===401||res.status===403?401:502});
