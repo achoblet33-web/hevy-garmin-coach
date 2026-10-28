@@ -6,6 +6,14 @@
 **Méthode :** revue statique du dépôt GitHub, inspections ciblées des API et composants, tests GitHub Actions Node et navigateurs simulés, vérification Railway staging. **Aucun accès aux clés personnelles ni aux données santé de l'utilisateur.**  
 **Portée exacte :** audit d'ingénierie et fonctionnel **sur code et données fictives**, pas une certification de sécurité, de précision physiologique ou de compatibilité sur iPhone/Apple Watch physiques.
 
+### Résultats automatisés de la Release Candidate
+
+- **GitHub Actions PR :** [workflow 40738153963](https://github.com/achoblet33-web/hevy-garmin-coach/actions/runs/40738153963) — **4 jobs réussis** : validation / tests Node et API, smoke staging de la version précédente, contrôle prod en lecture seule, navigateur.
+- **Navigateur candidat RC :** Chromium mobile 320/390 px : association manuelle, doubles imports, sauvegarde JSON, export AES-GCM, mauvaise phrase, annulation sans écrasement ; WebKit simulé 320/375/390/430 px : météo, formulaire, navigation, sauvegarde chiffrée — **réussis**.
+- **Attention :** le job smoke-staging exécuté pendant la PR vérifiait la version publique en service à cet instant, **pas encore la RC v16** ; il faut le **réexécuter après déploiement de la RC**.
+- Les tests ne remplacent toujours pas un essai sur **véritable iPhone Safari** ni Apple Watch Ultra 3.
+
+
 ## 1. Résumé exécutif
 
 Le projet est organisé autour de deux ensembles : un coach local en PWA et un relais HTTP lisant les données de plateformes tierces. L'intégration Hevy est **lecture seule**, la publication Intervals.icu exige une action de l'utilisateur. Les critères de séparation entre données certifiées, supposées et absentes sont généralement présents.
