@@ -121,11 +121,11 @@ function profileView(){
  <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
  <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">Intégration complémentaire à connecter ultérieurement</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="connect">Gérer les connexions</button></div></div>
- `{state.watchSuccess?`<div class="card">
+ ${state.watchSuccess?`<div class="card">
  <div class="eyebrow">Séance préparée pour l'Apple Watch</div>
- <h3 class="heading">`{state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
- <p class="sub">`{e(state.watchSuccess.message||"")}</p>
- `{state.watchSuccess.real?`<div class="callout">
+ <h3 class="heading">${state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
+ <p class="sub">${e(state.watchSuccess.message||"")}</p>
+ ${state.watchSuccess.real?`<div class="callout">
  <strong>Sur ton iPhone :</strong><br>
  1. Ouvre Intervals.icu et vérifie les étapes de la séance.<br>
  2. Ouvre <strong>Intervals.icu Companion</strong> → More → Workout Settings.<br>
@@ -223,10 +223,10 @@ function sheet(){
   </label>
   <p class="sub">Sans phrase secrète, la clé reste seulement en mémoire jusqu'à la fermeture ou au rechargement. Avec une phrase secrète, elle est chiffrée sur cet iPhone et tu pourras la déverrouiller à la prochaine ouverture.</p>
   <div class="actions"><button class="btn full" data-action="connectNow">Connecter mon compte</button></div>
-  `{localStorage.getItem(KEY_VAULT)?`<div class="line"></div><strong>Connexion sauvegardée sur cet appareil</strong>
+  ${localStorage.getItem(KEY_VAULT)?`<div class="line"></div><strong>Connexion sauvegardée sur cet appareil</strong>
   <label>Phrase de déverrouillage<input id="apiUnlockPass" type="password" autocomplete="off" placeholder="Ta phrase secrète"></label>
   <div class="actions"><button class="btn secondary full" data-action="unlockNow">Déverrouiller ma connexion</button></div>`:""}
-  `{state.connected?`<div class="callout">Compte Intervals.icu connecté. Les activités et les séances sont réelles.</div>`:""}
+  ${state.connected?`<div class="callout">Compte Intervals.icu connecté. Les activités et les séances sont réelles.</div>`:""}
   <div class="actions"><button class="btn ghost full" data-action="disconnect">Déconnecter et oublier la clé sauvegardée</button></div>
   <p class="sub"><strong>Apple Watch :</strong> ouvre Intervals.icu Companion → More → Workout Settings → active « Automatically Sync Planned Workouts to Apple Watch ».</p>`;
  if(sh==="watch")body=`<h2>Préparer sur l'Apple Watch</h2><p class="sub">Une séance structurée sera publiée dans Intervals.icu uniquement après ton accord.</p>
