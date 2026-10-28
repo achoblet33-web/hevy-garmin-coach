@@ -81,7 +81,8 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
   <article class="kintra-tile"><div class="kintra-card-label">▤ ${state.hevyKey?"HEVY PRO":"MUSCULATION"} · 7 JOURS</div>
   <div class="kintra-number">${muscleCount} <small>séances</small></div>
   <p class="sub">${state.hevyKey?"Hevy Pro synchronisé":"Hevy disponible dans Plus"}</p>
- <div class="kintra-muscle-breakdown">${muscle.upper||muscle.lower?`Haut ${muscle.upper} · Bas ${muscle.lower}`:"Répartition non précisée"}${muscle.mixed?` · Mixte ${muscle.mixed}`:""}</div></article>
+ <div class="kintra-muscle-breakdown">${muscle.upper||muscle.lower?`Haut ${muscle.upper} · Bas ${muscle.lower}`:"Répartition non précisée"}${muscle.mixed?` · Mixte ${muscle.mixed}`:""}</div>
+ <button class="textButton" data-action="showHevy">Détails Hevy ›</button></article>
  </div>
  ${weatherCard(state)}
  ${program?program():""}
