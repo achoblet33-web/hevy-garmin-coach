@@ -67,12 +67,23 @@ function validateFeedback(raw){
  }
  return result;
 }
+function validateLinks(raw){
+ if(!record(raw))throw Error("Associations de séances non valides.");
+ const result={};const entries=Object.entries(raw);
+ if(entries.length>1500)throw Error("Trop d'associations.");
+ for(const [planId,activityId] of entries){
+  if(forbidden.test(planId))continue;
+  if(!id(planId)||!id(activityId))throw Error("Identifiant d'association non valide.");
+  Object.defineProperty(result,planId,{value:activityId,enumerable:true,writable:true,configurable:true});
+ }
+ return result;
+}
 function portable(data,createdAt){
  return {schema:BACKUP_SCHEMA,createdAt,
   payload:{plan:validatePlan(data.plan??null),
    history:(Array.isArray(data.history)?data.history:[]).slice(-5).map(validatePlan),
    feedback:validateFeedback(data.feedback||{}),
-   adaptiveSuggestions:data.adaptiveSuggestions!==false}};
+   adaptiveSuggestions:data.adaptiveSuggestions!==false,pairedRuns:validateLinks(data.pairedRuns||{})}};
 }
 export function createPortableBackup(localData,createdAt=new Date().toISOString()){
  if(!record(localData)||!Number.isFinite(Date.parse(createdAt)))throw Error("Impossible de sauvegarder ces données.");
@@ -90,6 +101,7 @@ export function parsePortableBackup(text){
  const data=portable(parsed.payload,parsed.createdAt);
  return {createdAt:data.createdAt,plan:data.payload.plan,history:data.payload.history,
   feedback:data.payload.feedback,adaptiveSuggestions:data.payload.adaptiveSuggestions,
+  pairedRuns:data.payload.pairedRuns,
   count:{sessions:data.payload.plan?.sessions?.length||0,versions:data.payload.history.length,
    feedback:Object.keys(data.payload.feedback).length}};
 }
