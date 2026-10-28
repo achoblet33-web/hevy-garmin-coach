@@ -33,7 +33,7 @@ try{
   JSON.stringify({plan,history:[],feedback:{},adaptiveSuggestions:true,pairedRuns:{}})),plan);
  await page.route("**/v3/dashboard?*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)}));
  await page.goto(base+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded"});
- await page.locator('button[data-action="tab:plan"]').click();
+ await page.locator('.nav button[data-action="tab:plan"]').click();
  await page.locator('button[data-action="coachLink:0"]').waitFor({timeout:15000});
  await page.locator('button[data-action="coachLink:0"]').click();
  await page.getByText("Associer une sortie au programme").waitFor();
@@ -49,10 +49,10 @@ try{
  // Never silently remove different-provider activities that look like duplicates.
  data.activities.push({...first,id:"garmin:xyz",externalId:"xyz",source:"Garmin",
   startedAt:day+"T10:00:20Z",distanceKm:8.04});
- await page.locator('button[data-action="tab:activities"]').click();
+ await page.locator('.nav button[data-action="tab:activities"]').click();
  await page.locator('button[data-action="refreshData"]').click();
  await page.locator('[data-testid="possible-duplicates"]').waitFor({timeout:12000});
- await page.locator('button[data-action="tab:profile"]').click();
+ await page.locator('.nav button[data-action="tab:profile"]').click();
  const downloadPromise=page.waitForEvent("download");
  await page.locator('button[data-action="backupExport"]').click();
  const download=await downloadPromise;
