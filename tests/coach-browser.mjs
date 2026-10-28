@@ -51,13 +51,55 @@ try{
       wind_speed_10m:hours.map(()=>9),uv_index:hours.map(()=>2)}})});
  });
  await page.locator('button[data-action="weatherLocation"]').first().click();
+ const geometryBefore=await page.evaluate(()=>{
+  const modal=document.querySelector(".modal"),field=document.getElementById("weatherCity");
+  return {width:innerWidth,scroll:document.documentElement.scrollWidth,modal:modal.getBoundingClientRect().width,
+    inputFont:parseFloat(getComputedStyle(field).fontSize)};
+ });
+ assert.ok(geometryBefore.scroll<=geometryBefore.width+1,JSON.stringify(geometryBefore));
+ assert.ok(geometryBefore.modal<=geometryBefore.width+1,JSON.stringify(geometryBefore));
+ assert.ok(geometryBefore.inputFont>=16,"iOS city input font must prevent automatic focus zoom");
  await page.locator("#weatherCity").fill("Le Lamentin");
  await page.locator('button[data-action="weatherSearch"]').click();
+ await page.evaluate(()=>{document.querySelector(".kintra-place-results strong").textContent=
+  "Une très longue commune avec un nom sans espaces EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";});
+ const geometryAfter=await page.evaluate(()=>{
+  const modal=document.querySelector(".modal"),results=document.querySelector(".kintra-place-results");
+  return {width:innerWidth,scroll:document.documentElement.scrollWidth,modal:modal.getBoundingClientRect().width,
+    results:results.getBoundingClientRect().width};
+ });
+ assert.ok(geometryAfter.scroll<=geometryAfter.width+1,JSON.stringify(geometryAfter));
+ assert.ok(geometryAfter.modal<=geometryAfter.width+1,JSON.stringify(geometryAfter));
+ assert.ok(geometryAfter.results<=geometryAfter.width+1,JSON.stringify(geometryAfter));
+ await page.screenshot({path:"test-artifacts/kintra-meteo-ville-iphone.png",fullPage:true});
+ console.log("PASS: weather modal stays phone-width even with a long city result.");
+
  await page.locator('button[data-action="weatherChoose:0"]').click();
  await page.getByText(/MÉTÉO POUR COURIR · 12 H/).waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Le Lamentin/);
  assert.match(await page.locator("#app").innerText(),/Créneau indicativement plus confortable/);
  console.log("PASS: separate readiness, sleep, workout, training counts and selectable city with 12h forecast.");
+ const narrow=await browser.newPage({viewport:{width:320,height:700},deviceScaleFactor:2,isMobile:true,hasTouch:true,locale:"fr-FR"});
+ await narrow.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
+   body:JSON.stringify({ok:true,results:[{label:"Ville extrêmement longue dépassant la largeur des résultats de recherche, Région, Pays",latitude:14.61,longitude:-60.99}]})}));
+ await narrow.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded"});
+ await narrow.locator('[data-testid="weather-card"]').waitFor();
+ await narrow.locator('button[data-action="weatherLocation"]').first().click();
+ await narrow.locator("#weatherCity").fill("Ville");
+ await narrow.locator('button[data-action="weatherSearch"]').click();
+ const mobileBounds=await narrow.evaluate(()=>({
+   width:innerWidth,scroll:document.documentElement.scrollWidth,
+   modal:document.querySelector(".modal").getBoundingClientRect().width,
+   sheet:document.querySelector(".modalShade").getBoundingClientRect().width,
+   input:parseFloat(getComputedStyle(document.getElementById("weatherCity")).fontSize)}));
+ assert.ok(mobileBounds.scroll<=mobileBounds.width+1,JSON.stringify(mobileBounds));
+ assert.ok(mobileBounds.modal<=mobileBounds.width+1,JSON.stringify(mobileBounds));
+ assert.ok(mobileBounds.sheet<=mobileBounds.width+1,JSON.stringify(mobileBounds));
+ assert.ok(mobileBounds.input>=16,JSON.stringify(mobileBounds));
+ await narrow.screenshot({path:"test-artifacts/kintra-meteo-320px.png",fullPage:true});
+ await narrow.close();
+ console.log("PASS: 320px phone modal, long city result and native input text size stay responsive.");
+
  await page.screenshot({path:"test-artifacts/kintra-accueil-mobile.png",fullPage:true});
  console.log("PASS: Runna-like Today entry with 10km demo goal.");
  await page.locator(".nav button[data-action='tab:plan']").click();
