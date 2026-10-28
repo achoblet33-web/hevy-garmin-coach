@@ -65,3 +65,24 @@ jobs:
           node-version: "22"
       - name: Check public production /health without modifying it
         run: node tests/production-health-readonly.mjs
+
+  browser-v4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser test runtime (test job only)
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Exercise the actual mobile coach via staging HTTPS
+        run: node tests/coach-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trainsync-coach-mobile-preview
+          path: test-artifacts/*.png
+          if-no-files-found: ignore
