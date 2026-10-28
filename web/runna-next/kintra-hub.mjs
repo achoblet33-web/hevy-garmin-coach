@@ -9,7 +9,7 @@ function recoveryCard(readiness){
  const symbols={favorable:"✓",caution:"!",limited:"~",insufficient:"?"};
  const source=readiness.signals.map(x=>`<span class="kintra-recovery-indicator" title="${safe(x.reason)}">${safe(x.name)} <strong>${safe(x.value)}</strong></span>`).join("");
  return `<article class="kintra-summary-card kintra-readiness" data-testid="readiness">
-  <div class="kintra-card-head"><div><span class="eyebrow">PRÊT À PERFORMER ?</span><h3 class="heading">${safe(readiness.label)}</h3></div>
+  <div class="kintra-readiness-title">Préparation · selon les données disponibles</div><div class="kintra-card-head"><div><span class="eyebrow">PRÊT À PERFORMER ?</span><h3 class="heading">${safe(readiness.label)}</h3></div>
   <span class="kintra-readiness-symbol ${readiness.state}" aria-label="${safe(readiness.label)}">${symbols[readiness.state]||"?"}</span></div>
   <p class="sub">${safe(readiness.summary)}</p>
   ${source?`<div class="kintra-recovery-signals">${source}</div>`:
@@ -65,20 +65,20 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
  const muscle=strengthDistribution(sourceStrength||[],date);
  const muscleCount=muscle.total;
  return `<div class="kintra-welcome"><span class="eyebrow">KINTRA · TON HUB SPORTIF</span>
- <h2>Aujourd'hui,<br><em>fais le point.</em></h2><p>Ton entraînement, tes tendances et ta récupération, sans chiffres fictifs.</p></div>
+ <h2>Aujourd'hui</h2><p>${safe(short(date))} · Ton entraînement en un coup d’œil.</p></div>
  ${recoveryCard(ready)}
  ${sleepCard(ctx,state.wellness,date)}
  ${featured?`<button class="kintra-next-workout" data-action="session:${safe(featured.id)}" data-testid="next-workout">
-  <span class="kintra-next-icon">↗</span><span class="kintra-next-main"><small>PROCHAINE SÉANCE SUGGÉRÉE · ${short(featured.date)}</small>
+  <span class="kintra-next-icon">↗</span><span class="kintra-next-main"><small>PROCHAIN ENTRAÎNEMENT · ${short(featured.date)}</small>
   <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${featured.durationMinutes?formatTime(featured.durationMinutes)+" · ":""}${safe(featured.intensity||"Intensité au ressenti")}</span>
   <small>${state.adaptiveSuggestions?safe(advice.reason):"Adaptations automatiques désactivées"}</small></span><b>›</b></button>`:
  `<div class="kintra-next-empty"><strong>Quel est ton prochain objectif ?</strong><p class="sub">Crée un plan ou un cycle maintien pour recevoir une prochaine séance.</p>
  <button class="btn" data-action="setup">Créer mon programme</button></div>`}
  <div class="kintra-data-grid" data-testid="weekly-training-tiles">
-  <article class="kintra-tile"><div class="kintra-card-label">↗ COURSE · 7 JOURS</div>
+  <article class="kintra-tile"><div class="kintra-card-label">▥ COURSE · 7 JOURS</div>
   <div class="kintra-number">${ctx.runCount} <small>séances</small></div>
   <p class="sub">${shown(ctx.weeklyKm)} km parcourus</p>${renderWeeklyChart(state.activities,date,plan)}</article>
-  <article class="kintra-tile"><div class="kintra-card-label">▤ ${state.hevyKey?"HEVY PRO":"MUSCULATION"} · 7 JOURS</div>
+  <article class="kintra-tile"><div class="kintra-card-label">⌁ ${state.hevyKey?"HEVY PRO":"MUSCULATION"} · 7 JOURS</div>
   <div class="kintra-number">${muscleCount} <small>séances</small></div>
   <p class="sub">${state.hevyKey?"Hevy Pro synchronisé":"Hevy disponible dans Plus"}</p>
  <div class="kintra-muscle-breakdown">${muscle.upper||muscle.lower?`Haut ${muscle.upper} · Bas ${muscle.lower}`:"Répartition non précisée"}${muscle.mixed?` · Mixte ${muscle.mixed}`:""}</div>
