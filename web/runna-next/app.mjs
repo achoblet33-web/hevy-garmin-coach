@@ -7,6 +7,9 @@ import {renderHevyWorkouts,renderHevyWorkoutDetail} from "./kintra-hevy.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
+import {createPortableBackup,parsePortableBackup,MAX_BACKUP_BYTES} from "./local-backup.mjs";
+import {uniqueRunningActivities,findPotentialDuplicates} from "./workout-reconciliation.mjs";
+import {routeToGpx} from "./gpx-export.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -24,10 +27,10 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null};
-function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
-function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
-function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today()});}
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,pairedRuns:{},linkCandidate:null};
+function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;state.pairedRuns=saved.pairedRuns&&typeof saved.pairedRuns==="object"?saved.pairedRuns:{};}catch{}}
+function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{}}
+function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today(),pairedRuns:state.pairedRuns});}
 function alertText(text){state.toast=text;draw();setTimeout(()=>{if(state.toast===text){state.toast="";draw()}},5000)}
 function timeGoal(minutes){if(!minutes)return"Objectif libre";const h=Math.floor(minutes/60),m=Math.floor(minutes%60),s=Math.round(minutes*60%60);return (h? h+"h ":"")+String(m).padStart(h?2:1,"0")+"m "+String(s).padStart(2,"0")+"s"}
 function statData(){const limit=add(today(),-28);const runs=state.activities.filter(x=>x.category==="Course"&&String(x.startedAt||"").slice(0,10)>=limit);
@@ -117,7 +120,10 @@ function planView(){
 function activitiesView(){
  const stats=statData();
  const runlist=state.activities.filter(x=>x.category==="Course").slice(0,25);
- const warning=state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"";
+ const possibleDuplicates=findPotentialDuplicates(state.activities);
+ const warning=(state.syncNote?`<p class="warning">${e(state.syncNote)}</p>`:"")+
+ (possibleDuplicates.length?`<div class="card kintra-duplicate-warning" data-testid="possible-duplicates"><strong>${possibleDuplicates.length} possible(s) doublon(s) de courses</strong>
+ <p class="sub">Des enregistrements proches en date, durée et distance ont été détectés. Aucun entraînement n'est supprimé automatiquement. Vérifie tes sources Apple Santé / Intervals.icu avant de réimporter.</p></div>`:"");
  const tabs=`<div class="kintra-progress-tabs" role="group" aria-label="Analyse de progression">${[["summary","Résumé"],["splits","Splits"],["hr","Fréquence cardiaque"],["hevy","Hevy"]].map(([id,label])=>`<button class="${state.progressTab===id?"active":""}" data-action="progressTab:${id}">${label}</button>`).join("")}</div>`;
  if(state.progressTab==="hevy")return `<h2 class="pageTitle">Musculation Hevy Pro</h2>${tabs}${renderHevyWorkouts(state.hevySessions,!!state.hevyKey,state.hevyPartial)}`;
  if(state.progressTab==="splits")return `<h2 class="pageTitle">Progression</h2>${tabs}
@@ -188,6 +194,10 @@ function profileView(){
  </div>`:""}
  <div class="card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
  <p class="sub">Tes programmes et préférences sont enregistrés localement sur cet appareil. Les séances publiées doivent être vérifiées dans Intervals.icu.</p></div>
+ <div class="card" data-testid="kintra-backup-settings"><div class="heading">Sauvegarde & restauration</div>
+ <p class="sub">Sauvegarde tes programmes, anciennes versions et ressentis pour les transférer sur un autre appareil. Le fichier JSON n'est pas chiffré : conserve-le dans un endroit privé. Aucune clé API, trace GPS ou donnée de santé n'est incluse.</p>
+ <div class="actions"><button class="btn secondary" data-action="backupExport">Exporter ma sauvegarde</button>
+ <button class="btn secondary" data-action="backupRestore">Restaurer un fichier</button></div></div>
  <div class="card"><div class="heading">À propos de cette version</div><p class="sub">Interface de développement inspirée des principaux parcours d'applications de coaching running, conçue indépendamment. Pas d'enregistrement direct HealthKit dans cette PWA.</p><div class="warning">${DEMO?"Démonstration : données fictives. Aucune séance envoyée à la montre.":state.connected?"Mode actif : tes courses sont lues depuis Intervals.icu, confirme chaque publication.":"Mode actif non connecté : ouvre Mes connexions pour utiliser ton vrai compte."}</div></div>`;
 }
 function detailView(x){
@@ -279,6 +289,25 @@ function sheet(){
  <label>Adaptation<select id="adaptMode"><option value="easy">Uniquement facile</option><option value="off">Pause complète</option></select></label><label>Du<input id="adaptFrom" type="date" value="${today()}"></label><label>Au<input id="adaptTo" type="date" value="${add(today(),6)}"></label></div>
  <div class="actions"><button class="btn full" data-action="previewAdapt">Prévisualiser l'adaptation</button></div>`;
  if(sh==="coachProposal")body=renderCoachProposalPreview(state.coachPreview,state.coachProposal?.reason||"");
+ if(sh==="coachLink")body=`<h2>Associer une sortie au programme</h2>
+ <p class="sub">Séance prévue : <strong>${e(state.linkCandidate?.title||"—")}</strong></p>
+ <p class="sub">Course enregistrée : <strong>${e(state.linkCandidate?.candidateTitle||"—")}</strong></p>
+ <p class="warning">La date seule ne confirme pas le lien. Vérifie que c'est bien la même séance. L'association est locale, révocable et ne modifie pas Intervals.icu.</p>
+ <div class="actions"><button class="btn full" data-action="coachLinkAccept">Oui, c'est la même séance</button>
+ <button class="btn secondary" data-action="coachLinkReject">Non, conserver séparées</button></div>`;
+ if(sh==="backupRestore")body=`<h2>Restaurer tes données locales</h2>
+ <p class="sub">Choisis une sauvegarde JSON créée par KINTRA. Tu pourras la vérifier avant d'écraser les plans et ressentis de cet appareil. Les clés API restent inchangées.</p>
+ <label>Fichier de sauvegarde<input id="kintraBackupFile" type="file" accept=".json,application/json"></label>
+ <div class="actions"><button class="btn full" data-action="backupInspect">Vérifier la sauvegarde</button>
+ <button class="btn secondary" data-action="close">Annuler</button></div>`;
+ if(sh==="backupConfirm")body=`<h2>Confirmer la restauration</h2>
+ <p class="sub">Fichier du ${e(state.backupCandidate?.createdAt||"date inconnue")}. Les programmes actuels et ressentis locaux seront remplacés, sans modifier tes comptes Intervals.icu ou Hevy.</p>
+ <div class="kintra-coach-v2-grid">
+ <div><small>Séances</small><strong>${state.backupCandidate?.count?.sessions??0}</strong></div>
+ <div><small>Anciennes versions</small><strong>${state.backupCandidate?.count?.versions??0}</strong></div>
+ <div><small>Ressentis</small><strong>${state.backupCandidate?.count?.feedback??0}</strong></div></div>
+ <div class="actions"><button class="btn" data-action="backupApply">Remplacer mes données locales</button>
+ <button class="btn secondary" data-action="backupCancel">Annuler sans modifier</button></div>`;
  if(sh==="preview")body=`<h2>Vérifier le nouveau plan</h2><p class="sub">${state.draft.totalWeeks} semaines · ${state.draft.mode==="maintenance"?"Maintien":state.draft.profile.distanceKm+" km"} · ${state.draft.profile.frequency} séances/semaine</p>
  <div class="statrow"><div class="stat"><strong>${state.draft.summary[0]?.plannedKm??0}</strong><small>Semaine 1</small></div><div class="stat"><strong>${state.draft.sessions.length}</strong><small>Créneaux</small></div><div class="stat"><strong>${state.draft.totalWeeks}</strong><small>Semaines</small></div></div>
  ${state.draft.notes.map(n=>`<p class="warning">${e(n)}</p>`).join("")}
@@ -428,7 +457,7 @@ async function sync(){
  if(!DEMO&&!state.connected){state.activities=[];state.wellness=[];state.strength=state.hevySessions||[];state.sourceMode="disconnected";draw();return;}
  try{
   const data=await api("/dashboard?days=90");
-  state.activities=Array.isArray(data.activities)?data.activities:[];
+  state.activities=uniqueRunningActivities(Array.isArray(data.activities)?data.activities:[]);
   state.intervalsStrength=Array.isArray(data.strength)?data.strength:[];
   state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
   state.wellness=Array.isArray(data.wellness)?data.wellness:[];
@@ -448,6 +477,32 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
+ if(action==="backupExport"){
+  const value=createPortableBackup({plan:state.plan,history:state.versionHistory,feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,pairedRuns:state.pairedRuns});
+  const blob=new Blob([value],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="KINTRA-sauvegarde-"+today()+".json";document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);alertText("Fichier de sauvegarde créé. Conserve-le dans un endroit privé.");return;
+ }
+ if(action==="backupRestore"){state.backupCandidate=null;state.sheet="backupRestore";draw();return;}
+ if(action==="backupInspect"){
+  const file=$("kintraBackupFile")?.files?.[0];
+  if(!file)throw Error("Sélectionne d'abord un fichier JSON de sauvegarde.");
+  if(file.size>MAX_BACKUP_BYTES)throw Error("Le fichier est trop volumineux.");
+  state.backupCandidate=parsePortableBackup(await file.text());state.sheet="backupConfirm";draw();return;
+ }
+ if(action==="backupCancel"){state.backupCandidate=null;state.sheet=null;draw();return;}
+ if(action==="backupApply"){
+  const backup=state.backupCandidate;
+  if(!backup)throw Error("Aucune sauvegarde vérifiée.");
+  if(!confirm("Remplacer les programmes et ressentis stockés sur cet appareil ? Tes clés API ne seront pas touchées."))return;
+  const next={plan:backup.plan,history:backup.history,feedback:backup.feedback,adaptiveSuggestions:backup.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:backup.pairedRuns};
+  localStorage.setItem(STORAGE,JSON.stringify(next));
+  state.plan=backup.plan;state.versionHistory=backup.history;state.feedback=backup.feedback;
+  state.adaptiveSuggestions=backup.adaptiveSuggestions;state.pairedRuns=backup.pairedRuns;state.backupCandidate=null;state.selected=null;
+  state.week=0;state.chosenDay=today();state.sheet=null;state.tab="plan";
+  draw();alertText("Sauvegarde restaurée. Tes connexions restent inchangées.");return;
+ }
  if(action==="hevy"){state.sheet="hevy";draw();return;}
  if(action==="hevyConnect"){
   if(DEMO)throw Error("Connecte Hevy depuis la version active, pas la démonstration.");
@@ -489,6 +544,18 @@ async function perform(action,value){
  if(action==="backHevy"){state.hevyFocus=null;state.tab="activities";draw();return;}
  if(action==="refreshHevy"){await syncHevy();alertText("Séances Hevy synchronisées.");return;}
  if(action==="showHevy"){state.tab="activities";state.progressTab="hevy";state.activityFocus=null;state.hevyFocus=null;draw();return;}
+ if(action==="exportGpx"){
+  const points=state.activityDetail?.route?.points;
+  if(!state.activityDetail?.route?.hasGps||!Array.isArray(points)||points.length<2)
+    throw Error("Aucun parcours GPS exploitable à exporter.");
+  const activity=state.activities.find(a=>String(a.externalId||a.id?.replace(/^intervals:/,""))===state.activityFocus);
+  const xml=routeToGpx(points,activity?.title||"Course KINTRA");
+  const url=URL.createObjectURL(new Blob([xml],{type:"application/gpx+xml;charset=utf-8"}));
+  const anchor=document.createElement("a");anchor.href=url;
+  anchor.download="KINTRA-parcours-"+(activity?.startedAt?.slice(0,10)||today())+".gpx";
+  document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  alertText("Tracé GPX exporté depuis les points enregistrés.");return;
+ }
  if(action==="mapTiles"){
   if(!state.activityDetail?.route?.hasGps)throw Error("Aucune trace GPS à afficher.");
   state.mapEnabled=!state.mapEnabled;draw();return;
@@ -515,6 +582,33 @@ async function perform(action,value){
  if(action==="startMode"){
    state.form={...sample(),...(state.plan?.profile||{}),mode:value==="maintenance"?"maintenance":"event"};
    state.step=0;state.wizard=true;state.selected=null;state.sheet=null;draw();return;
+ }
+ if(action==="coachLink"){
+  const i=Number(value),review=coachReview(),candidate=review?.matching?.[i];
+  if(!Number.isInteger(i)||!candidate||candidate.status!=="suggested"||candidate.candidates.length!==1)
+    throw Error("Association non disponible.");
+  state.linkCandidate={sessionId:candidate.id,activityId:candidate.candidates[0],
+    title:candidate.title,candidateTitle:candidate.candidateTitles[0]};
+  state.sheet="coachLink";draw();return;
+ }
+ if(action==="coachLinkAccept"){
+  const link=state.linkCandidate;
+  const current=coachReview()?.matching?.find(x=>x.id===link?.sessionId);
+  if(!link||current?.status!=="suggested"||!current.candidates.includes(link.activityId))
+    throw Error("La correspondance a changé. Vérifie à nouveau tes activités.");
+  if(Object.entries(state.pairedRuns).some(([k,v])=>k!==link.sessionId&&v===link.activityId))
+    throw Error("Cette course est déjà associée à une autre séance.");
+  state.pairedRuns={...state.pairedRuns,[link.sessionId]:link.activityId};
+  state.linkCandidate=null;state.sheet=null;persist();draw();
+  alertText("Course associée à ton programme local. Aucune écriture externe.");return;
+ }
+ if(action==="coachLinkReject"){state.linkCandidate=null;state.sheet=null;draw();return;}
+ if(action==="coachUnlink"){
+  const candidate=coachReview()?.matching?.[Number(value)];
+  if(!candidate||candidate.source!=="user_confirmed")throw Error("Association introuvable.");
+  if(!confirm("Retirer cette association locale, sans supprimer la course ?"))return;
+  const updated={...state.pairedRuns};delete updated[candidate.id];state.pairedRuns=updated;
+  persist();draw();return;
  }
  if(action==="coachProposal"){
   if(!state.adaptiveSuggestions)throw Error("Active d'abord les conseils adaptatifs dans Coach.");
@@ -551,7 +645,7 @@ async function perform(action,value){
   state.plan=state.draft;state.draft=null;state.week=0;state.chosenDay=today();state.sheet=null;state.tab="today";persist();draw();return;
  }
  if(action==="manage"||action==="adjust"||action==="history"||action==="connect"||action==="instant"){state.sheet=action;draw();return;}
- if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;draw();return;}
+ if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;state.linkCandidate=null;draw();return;}
  if(action==="calendar"){state.sheet=null;state.tab="plan";state.week=0;draw();return;}
  if(action==="status"){patchStatus(value);return;}
  if(action==="move"||action==="feedback"){state.sheet=action;draw();return;}

@@ -38,6 +38,8 @@ jobs:
           node --check web/runna-next/after-run.mjs
           node --check web/runna-next/kintra-coach.mjs
           node --check web/runna-next/kintra-coach-v2.mjs
+          node --check web/runna-next/local-backup.mjs
+          node --check web/runna-next/gpx-export.mjs
           node --check web/runna-next/kintra-hub.mjs
           node --check web/runna-next/kintra-weather.mjs
           node --check web/runna-next/kintra-insights.mjs
@@ -97,6 +99,8 @@ jobs:
         run: node tests/coach-browser.mjs
       - name: Verify Coach 2.0 locally with mock data at iPhone widths (NO KEYS)
         run: node tests/coach-v2-browser.mjs
+      - name: Verify KINTRA 3.0 reliability, backups and manual matching on iPhone without keys
+        run: node tests/kintra-v3-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
