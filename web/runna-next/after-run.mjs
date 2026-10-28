@@ -1,4 +1,5 @@
 import {reconcileWorkouts,summarizeRun,findPlanWorkout} from "./workout-reconciliation.mjs";
+import {analyzeRun} from "./kintra-insights.mjs";
 const e=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nf=x=>x==null||!Number.isFinite(Number(x))?"—":Number(x).toLocaleString("fr-FR",{maximumFractionDigits:2});
 const date=s=>{const iso=String(s||"").slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return "Date inconnue";
@@ -29,7 +30,7 @@ export function renderTrainingReview(activities=[],planned=[]){
   ${rows||`<div class="empty"><strong>Aucune course terminée importée</strong>Synchronise Companion après ta course, puis actualise TrainSync.</div>`}
  </article>`;
 }
-export function renderActivityReport({activity,planned=[],plan=null,segments=null,loading=false,feedback=null}={}){
+export function renderActivityReport({activity,activities=[],planned=[],plan=null,segments=null,loading=false,feedback=null}={}){
  if(!activity)return `<div class="card empty">Cette course n'est pas disponible dans l'historique synchronisé.</div>`;
  const info=summarizeRun(activity),known=!!activity.pairedEventId;
  const linked=planned.find(p=>String(p.id)===String(activity.pairedEventId));
@@ -38,6 +39,7 @@ export function renderActivityReport({activity,planned=[],plan=null,segments=nul
  const plannedKm=Number(relative?.distanceKm||0);
  const delta=known&&plannedKm&&info.distanceKm!=null?+(info.distanceKm-plannedKm).toFixed(2):null;
  const laps=Array.isArray(segments?.segments)?segments.segments:[];
+ const insight=analyzeRun({activity,activities,segments:laps,feedback});
  const lapRows=laps.map((lap,i)=>`<div class="step">
    <div class="number">${i+1}</div>
    <div style="flex:1;min-width:0"><strong>${e(lap.label||"Segment "+(i+1))}</strong>
@@ -66,6 +68,11 @@ export function renderActivityReport({activity,planned=[],plan=null,segments=nul
    lapRows||`<div class="empty"><strong>Pas de segments détaillés disponibles</strong>Le détail dépend des tours enregistrés et analysés dans Intervals.icu.</div>`}
   ${segments?.note?`<p class="sub">${e(segments.note)}</p>`:""}
  </div>
+ <div class="card kintra-coach-review" data-testid="post-run-insights"><div class="eyebrow">CONSEILS PERSONNALISÉS</div>
+ <h3 class="heading">Analyse et pistes d'amélioration</h3>
+ ${insight.observations.map(o=>`<p class="sub">• ${e(o)}</p>`).join("")}
+ ${insight.recommendations.map(o=>`<div class="kintra-insight-tip">${e(o)}</div>`).join("")}
+ <p class="sub">Analyse statistique indicative : aucune donnée manquante n'a été estimée.</p></div>
  <div class="card"><div class="eyebrow">Retour d'expérience</div><h3 class="heading">Comment s'est passée ta course ?</h3>
   <p class="sub">Ton ressenti est stocké sur cet appareil et n'ajuste pas automatiquement ton programme.</p>
   ${feedback?`<div class="callout">Difficulté : ${nf(feedback.rpe)}/10${feedback.comment?` · ${e(feedback.comment)}`:""}</div>`:""}
