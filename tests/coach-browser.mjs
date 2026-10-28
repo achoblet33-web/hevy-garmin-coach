@@ -79,6 +79,18 @@ try{
  await page.getByText(/MÉTÉO POUR COURIR · 12 H/).waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Le Lamentin/);
  assert.match(await page.locator("#app").innerText(),/Créneau indicativement plus confortable/);
+ const weatherBounds=await page.evaluate(()=>{
+  const box=document.querySelector(".kintra-weather-detail"),strip=document.querySelector(".kintra-hours");
+  return {viewport:innerWidth,document:document.documentElement.scrollWidth,
+    body:document.body.scrollWidth,box:box.getBoundingClientRect().width,
+    strip:strip.clientWidth,innerStrip:strip.scrollWidth};
+ });
+ assert.ok(weatherBounds.document<=weatherBounds.viewport+1,JSON.stringify(weatherBounds));
+ assert.ok(weatherBounds.body<=weatherBounds.viewport+1,JSON.stringify(weatherBounds));
+ assert.ok(weatherBounds.box<=weatherBounds.viewport+1,JSON.stringify(weatherBounds));
+ assert.ok(weatherBounds.innerStrip>weatherBounds.strip,"Hourly forecast must scroll inside its tile.");
+ console.log("PASS: 12-hour weather strip scrolls inside the tile without changing phone viewport.");
+
  console.log("PASS: separate readiness, sleep, workout, training counts and selectable city with 12h forecast.");
  const narrow=await browser.newPage({viewport:{width:320,height:700},deviceScaleFactor:2,isMobile:true,hasTouch:true,locale:"fr-FR"});
  await narrow.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
@@ -98,6 +110,21 @@ try{
  assert.ok(mobileBounds.modal<=mobileBounds.width+1,JSON.stringify(mobileBounds));
  assert.ok(mobileBounds.sheet<=mobileBounds.width+1,JSON.stringify(mobileBounds));
  assert.ok(mobileBounds.input>=16,JSON.stringify(mobileBounds));
+ await narrow.route("**/v3/weather?*",route=>{
+  const epoch=Math.floor(Date.now()/3600000)*3600, hours=Array.from({length:24},(_,i)=>epoch+i*3600);
+  return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,
+    temperature:29,apparent:34,humidity:78,wind:10,timezone:"America/Martinique",
+    hourly:{time:hours,apparent_temperature:hours.map(()=>32),temperature_2m:hours.map(()=>29),
+    relative_humidity_2m:hours.map(()=>78),precipitation_probability:hours.map(()=>20),wind_speed_10m:hours.map(()=>10),
+    uv_index:hours.map(()=>4)}})});
+ });
+ await narrow.locator('button[data-action="weatherChoose:0"]').click();
+ await narrow.locator(".kintra-hours").waitFor({state:"visible"});
+ const narrowWeather=await narrow.evaluate(()=>({width:innerWidth,html:document.documentElement.scrollWidth,
+   body:document.body.scrollWidth,strip:document.querySelector(".kintra-hours").getBoundingClientRect().width}));
+ assert.ok(narrowWeather.html<=narrowWeather.width+1,JSON.stringify(narrowWeather));
+ assert.ok(narrowWeather.body<=narrowWeather.width+1,JSON.stringify(narrowWeather));
+ assert.ok(narrowWeather.strip<=narrowWeather.width,JSON.stringify(narrowWeather));
  await narrow.screenshot({path:"test-artifacts/kintra-meteo-320px.png",fullPage:true});
  await narrow.close();
  console.log("PASS: 320px phone modal, long city result and native input text size stay responsive.");
@@ -170,6 +197,14 @@ try{
  await page.locator('button[data-action^="activity:"]').first().click();
  await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
+ await page.locator('[data-testid="route-map"]').waitFor({timeout:12000});
+ await page.locator('[data-testid="complete-run-metrics"]').waitFor({timeout:12000});
+ await page.route("https://tile.openstreetmap.org/**",route=>route.abort());
+ assert.equal(await page.locator(".kintra-map-tiles img").count(),0,"OSM must not load without consent.");
+ await page.locator('button[data-action="mapTiles"]').click();
+ assert.ok(await page.locator(".kintra-map-tiles img").count()>0);
+ console.log("PASS: synthetic GPS, optional OSM basemap and detailed running metrics.");
+
  await page.getByText("DÉMO · Échauffement").waitFor({timeout:12000});
  await page.locator(".kintra-laps-table").waitFor({timeout:12000});
  await page.locator('button[data-action="activityFeedback"]').click();
@@ -216,6 +251,13 @@ try{
  await active.locator('.nav button[data-action="tab:today"]').click();
  assert.match(await active.locator('[data-testid="weekly-training-tiles"]').innerText(),/HEVY PRO/);
  await active.screenshot({path:"test-artifacts/kintra-hevy-accueil-mobile.png",fullPage:true});
+ await active.locator('button[data-action="showHevy"]').first().click();
+ await active.locator('[data-testid="hevy-workouts"]').waitFor();
+ await active.locator('button[data-action="hevyWorkout:0"]').click();
+ await active.locator('[data-testid="hevy-workout-detail"]').waitFor();
+ assert.match(await active.locator("#app").innerText(),/Back Squat/);
+ assert.match(await active.locator("#app").innerText(),/90 kg/);
+ await active.locator('button[data-action="backHevy"]').click();
  console.log("PASS: Hevy Pro personal API integration works without Intervals connected (mocked API only).");
  await active.close();
  assert.deepEqual(errors,[],"No uncaught browser errors");
