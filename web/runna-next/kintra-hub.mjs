@@ -1,66 +1,96 @@
-import {evaluateSportContext,recommendWorkout} from "./kintra-coach.mjs";
+import {evaluateSportContext,evaluateReadiness,recommendWorkout} from "./kintra-coach.mjs";
+import {forecastSlots,formatLocalHour} from "./kintra-weather.mjs";
 const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const shown=n=>n==null||!Number.isFinite(Number(n))?"—":Number(n).toLocaleString("fr-FR",{maximumFractionDigits:1});
 const short=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 const dateAdd=(date,offset)=>{const d=new Date(date+"T12:00:00");d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
-function forecastCard(weather){
- if(!weather)return `<div class="kintra-weather">
- <div class="kintra-icon-tile">☀</div><div><strong>Météo de ton entraînement</strong>
- <p class="sub">Vérifie chaleur et humidité avant ta sortie.</p></div>
- <button class="textButton" data-action="weather">Activer ›</button></div>`;
- return `<div class="kintra-weather"><div class="kintra-icon-tile">☀</div><div style="flex:1"><strong>Météo locale</strong>
- <p class="sub">${shown(weather.temperature)} °C · Ressenti ${shown(weather.apparent)} °C<br>
- Humidité ${shown(weather.humidity)} % · Vent ${shown(weather.wind)} km/h</p><p class="sub" style="font-size:10px">Source : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a></p></div>
- <button class="textButton" data-action="weather">↻</button></div>`;
+function recoveryCard(readiness){
+ const symbols={favorable:"✓",caution:"!",limited:"~",insufficient:"?"};
+ const source=readiness.signals.map(x=>`<span class="kintra-recovery-indicator" title="${safe(x.reason)}">${safe(x.name)} <strong>${safe(x.value)}</strong></span>`).join("");
+ return `<article class="kintra-summary-card kintra-readiness" data-testid="readiness">
+  <div class="kintra-card-head"><div><span class="eyebrow">PRÊT À PERFORMER ?</span><h3 class="heading">${safe(readiness.label)}</h3></div>
+  <span class="kintra-readiness-symbol ${readiness.state}" aria-label="${safe(readiness.label)}">${symbols[readiness.state]||"?"}</span></div>
+  <p class="sub">${safe(readiness.summary)}</p>
+  ${source?`<div class="kintra-recovery-signals">${source}</div>`:
+    `<p class="sub">Synchronise quelques nuits avec Intervals.icu pour commencer l'analyse.</p>`}
+  ${readiness.freshness?`<small class="kintra-source-hint">Mesures du ${safe(readiness.freshness)} · ${readiness.referenceDays} nuits de référence disponibles</small>`:""}
+ </article>`;
 }
-function readiness(context){
- const label=context.grade==="prudence"?"Prudence aujourd'hui":context.signalsAvailable===0?"Données insuffisantes":"Contexte de récupération";
- const message=context.warnings.find(x=>!/insuffisant/.test(x))||"Aucun score arbitraire : ces données sont des repères, pas un diagnostic.";
- return `<article class="kintra-summary-card">
- <div class="kintra-card-head"><div><span class="eyebrow">État du jour</span><h3 class="heading">${label}</h3></div>
- <span class="kintra-ring ${context.grade==="prudence"?"caution":""}">${context.signalsAvailable}/5<small>mesures</small></span></div>
- <p class="sub">${safe(message)}</p>
- <div class="kintra-mini-stats">
-  <div><span>Sommeil</span><strong>${context.sleepHours==null?"—":shown(context.sleepHours)+" h"}</strong></div>
-  <div><span>HRV</span><strong>${context.hrv==null?"—":shown(context.hrv)+" ms"}</strong></div>
-  <div><span>FC repos</span><strong>${context.restingHR==null?"—":shown(context.restingHR)+" bpm"}</strong></div>
- </div></article>`;
+function sleepCard(context){
+ let label=context.sleepHours==null?"Données non disponibles":context.sleepHours.toLocaleString("fr-FR",{maximumFractionDigits:1})+" h";
+ const actual=context.sleepScore==null?null:shown(context.sleepScore);
+ return `<article class="kintra-sleep-card" data-testid="sleep-card">
+ <div class="kintra-sleep-moon">☾</div><div class="kintra-sleep-detail"><span class="eyebrow">SOMMEIL & RÉCUPÉRATION</span>
+ <strong>${safe(label)}</strong><span class="sub">${actual==null?"Qualité : pas de score fourni": "Score fourni : "+actual}
+ ${context.latestDate?" · "+safe(context.latestDate):""}</span></div>
+ <button class="kintra-mini-button" data-action="tab:activities" aria-label="Voir la récupération">›</button></article>`;
+}
+function weatherCard(state){
+ const location=state.weatherPlace?.label||"Choisir une ville";
+ const weather=state.weather;
+ if(!weather)return `<article class="kintra-weather-detail" data-testid="weather-card">
+ <div class="between"><div><span class="eyebrow">MÉTÉO POUR COURIR</span><h3 class="heading">${safe(location)}</h3></div>
+ <button class="textButton" data-action="weatherLocation">Modifier ›</button></div>
+ <p class="sub">Choisis une ville pour connaître les conditions des douze prochaines heures. Le GPS reste facultatif.</p>
+ <button class="btn secondary full" data-action="weatherLocation">Consulter les prévisions</button></article>`;
+ const forecast=forecastSlots(weather);
+ const best=forecast.best;
+ const hourly=forecast.hours.slice(0,12).map(x=>
+  `<div class="kintra-hour-forecast ${best?.epoch===x.epoch?"best":""}">
+  <strong>${formatLocalHour(x.epoch,forecast.timezone)}</strong>
+  <span>${shown(x.feels)} °C</span><small>Pluie ${x.rain==null?"—":shown(x.rain)+" %"}</small>
+  <small>${safe(x.grade)}</small></div>`).join("");
+ return `<article class="kintra-weather-detail" data-testid="weather-card">
+ <div class="between"><div><span class="eyebrow">MÉTÉO POUR COURIR · 12 H</span><h3 class="heading">${safe(location)}</h3></div>
+ <button class="textButton" data-action="weatherLocation">Modifier ›</button></div>
+ <div class="kintra-weather-now"><strong>${shown(weather.temperature)} °C</strong>
+ <span>Ressenti ${shown(weather.apparent)} °C · Humidité ${shown(weather.humidity)} % · Vent ${shown(weather.wind)} km/h</span></div>
+ ${best?`<div class="kintra-weather-best"><span>Créneau indicativement plus confortable</span>
+ <strong>${formatLocalHour(best.epoch,forecast.timezone)}</strong>
+ <small>${best.caution?"Vigilance : chaleur, UV ou risque de pluie":"Selon les prévisions disponibles"}</small></div>`:
+ `<p class="sub">Pas de créneau de jour comparable parmi les douze prochaines heures.</p>`}
+ <div class="kintra-hours" aria-label="Prévisions heure par heure">${hourly||"Prévisions indisponibles."}</div>
+ <small class="kintra-source-hint">Source : Open-Meteo · ${safe(forecast.explanation)}</small></article>`;
 }
 export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,program}){
- const context=evaluateSportContext({activities:state.activities,wellness:state.wellness,strength:state.strength,date});
- const daySessions=plan?.sessions?.filter(x=>x.date===state.chosenDay)||[];
- const next=plan?.sessions?.filter(x=>x.date>state.chosenDay&&x.kind!=="rest").slice(0,2)||[];
- const advice=recommendWorkout({plan,context,date});
- const featured=daySessions.find(x=>x.kind!=="rest")||next[0]||null;
- const recentStrength=state.activities.filter(x=>x.category==="Musculation").filter(x=>String(x.startedAt||"").slice(0,10)>=dateAdd(date,-6));
- return `<div class="kintra-welcome"><span class="eyebrow">TON POTENTIEL EN MOUVEMENT</span>
- <h2>Ta performance,<br><em>en un regard.</em></h2><p>Un tableau de bord personnel : tes vraies activités, ton entraînement et ta récupération.</p></div>
- ${readiness(context)}
- ${featured?`<button class="kintra-next-workout" data-action="session:${safe(featured.id)}">
- <span class="kintra-next-icon">♨</span><span class="kintra-next-main"><small>PROCHAIN ENTRAÎNEMENT · ${short(featured.date)}</small>
- <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${safe(featured.intensity||"Intensité selon sensations")}</span></span><b>›</b></button>`:
- `<div class="kintra-next-empty"><strong>Prêt pour la suite ?</strong><p class="sub">Construis un programme adapté à tes objectifs.</p>
+ const ctx=evaluateSportContext({activities:state.activities,wellness:state.wellness,strength:state.strength,date});
+ const ready=evaluateReadiness({activities:state.activities,wellness:state.wellness,strength:state.strength,date});
+ const sessions=plan?.sessions?.filter(x=>x.date===state.chosenDay)||[];
+ const upcoming=plan?.sessions?.filter(x=>x.date>state.chosenDay&&x.kind!=="rest").slice(0,2)||[];
+ const featured=sessions.find(x=>x.kind!=="rest")||upcoming[0]||null;
+ const advice=recommendWorkout({plan,context:ctx,date});
+ const sourceStrength=state.hevyKey?state.hevySessions:state.strength;
+ const muscleCount=(sourceStrength||[]).filter(x=>{
+  const dt=String(x.startedAt||"").slice(0,10);return dt>=dateAdd(date,-6)&&dt<=date;
+ }).length;
+ return `<div class="kintra-welcome"><span class="eyebrow">KINTRA · TON HUB SPORTIF</span>
+ <h2>Aujourd'hui,<br><em>fais le point.</em></h2><p>Ton entraînement, tes tendances et ta récupération, sans chiffres fictifs.</p></div>
+ ${recoveryCard(ready)}
+ ${sleepCard(ctx)}
+ ${featured?`<button class="kintra-next-workout" data-action="session:${safe(featured.id)}" data-testid="next-workout">
+  <span class="kintra-next-icon">↗</span><span class="kintra-next-main"><small>PROCHAINE SÉANCE SUGGÉRÉE · ${short(featured.date)}</small>
+  <strong>${safe(featured.title)}</strong><span>${shown(featured.distanceKm)} km · ${safe(featured.intensity||"Intensité au ressenti")}</span>
+  <small>${state.adaptiveSuggestions?safe(advice.reason):"Adaptations automatiques désactivées"}</small></span><b>›</b></button>`:
+ `<div class="kintra-next-empty"><strong>Quel est ton prochain objectif ?</strong><p class="sub">Crée un plan ou un cycle maintien pour recevoir une prochaine séance.</p>
  <button class="btn" data-action="setup">Créer mon programme</button></div>`}
- <div class="kintra-data-grid">
-  <article class="kintra-tile"><div class="kintra-card-label">↗ Charge de course · 7 jours</div>
-  <div class="kintra-number">${shown(context.weeklyKm)} <small>km</small></div>
-  <p class="sub">${context.baselineKm>0?"Moyenne hebdo. précédente : "+shown(context.baselineKm)+" km":"Historique en cours de constitution"}</p></article>
-  <article class="kintra-tile"><div class="kintra-card-label">▤ Renforcement · 7 jours</div>
-  <div class="kintra-number">${context.strengthCount||recentStrength.length}</div>
-  <p class="sub">${state.hevyKey?"Source : Hevy Pro synchronisé":state.hevySessions?.length?"Source : Hevy":"Connecte Hevy Pro dans Plus → Connexions"}</p></article>
+ <div class="kintra-data-grid" data-testid="weekly-training-tiles">
+  <article class="kintra-tile"><div class="kintra-card-label">↗ COURSE · 7 JOURS</div>
+  <div class="kintra-number">${ctx.runCount} <small>séances</small></div>
+  <p class="sub">${shown(ctx.weeklyKm)} km parcourus</p></article>
+  <article class="kintra-tile"><div class="kintra-card-label">▤ ${state.hevyKey?"HEVY PRO":"MUSCULATION"} · 7 JOURS</div>
+  <div class="kintra-number">${muscleCount} <small>séances</small></div>
+  <p class="sub">${state.hevyKey?"Séances importées de Hevy": "Connecter Hevy dans Plus"}</p></article>
  </div>
+ ${weatherCard(state)}
  ${program?program():""}
- <article class="kintra-sheet"><div class="between"><strong>Ta semaine</strong><button class="textButton" data-action="tab:plan">Voir le plan ›</button></div>
- ${plan?weekstrip(state.chosenDay):`<p class="sub">Crée un programme événement ou maintien pour organiser ton entraînement.</p>`}</article>
- <div class="sectionTitle"><h2>${state.chosenDay===date?"Prochaine séance":short(state.chosenDay)}</h2>
-  <button class="textButton" data-action="instant">+ Séance libre</button></div>
- ${daySessions.length?daySessions.map(sessionCard).join(""):next.length?next.map(sessionCard).join(""):`<div class="card empty"><strong>Journée libre</strong>Récupération, mobilité ou sortie libre selon ton ressenti.</div>`}
- <article class="kintra-coach-tip"><div class="eyebrow">◉ CONSEIL KINTRA</div><h3>${safe(advice.title)}</h3>
-  <p class="sub">${safe(advice.reason)}</p>
-  ${context.warnings.length?`<p class="kintra-muted-warning">${safe(context.warnings.join(" "))}</p>`:""}
-  <div class="actions"><button class="btn secondary" data-action="adjust">Adapter mon entraînement</button></div></article>
- ${forecastCard(state.weather)}
- <p class="kintra-disclaimer">KINTRA utilise des règles de progression prudentes inspirées des pratiques publiquement documentées de coaching sportif. Les recommandations ne remplacent ni ton ressenti ni un avis médical.</p>`;
+ <div class="kintra-sheet"><div class="between"><strong>Ta semaine</strong><button class="textButton" data-action="tab:plan">Coach ›</button></div>
+ ${plan?weekstrip(state.chosenDay):`<p class="sub">Créer un programme événement ou maintien.</p>`}</div>
+ <div class="sectionTitle"><h2>Mes séances</h2><button class="textButton" data-action="instant">+ Séance libre</button></div>
+ ${sessions.length?sessions.map(sessionCard).join(""):upcoming.length?upcoming.map(sessionCard).join(""):`<div class="card empty">Aucune séance planifiée pour cette journée.</div>`}
+ <article class="kintra-coach-tip"><div class="eyebrow">CONSEIL DU COACH</div><h3>${safe(state.adaptiveSuggestions?advice.title:"Conseils désactivés")}</h3>
+ <p class="sub">${safe(state.adaptiveSuggestions?advice.reason:"Tu peux activer les conseils dans Coach.")}</p>
+ <div class="actions"><button class="btn secondary" data-action="adjust" ${plan?"":"disabled"}>Adapter mon entraînement</button></div></article>
+ <p class="kintra-disclaimer">Avis sportifs non médicaux. L'heure météo et l'état de récupération sont indicatifs, à confirmer avec ton ressenti.</p>`;
 }
 export function renderKintraProgressSummary({state,date}){
  const c=evaluateSportContext({activities:state.activities,wellness:state.wellness,strength:state.strength,date});
@@ -68,23 +98,19 @@ export function renderKintraProgressSummary({state,date}){
  <div><small>Volume 7 j</small><strong>${shown(c.weeklyKm)} km</strong></div>
  <div><small>Charge chronique</small><strong>${shown(c.ctl)}</strong></div>
  <div><small>Charge aiguë</small><strong>${shown(c.atl)}</strong></div>
- </div>
- <p class="sub">CTL / ATL : mesures Intervals.icu lorsqu'elles sont fournies; aucune estimation inventée.</p>`;
+ </div><p class="sub">Charges CTL / ATL affichées uniquement si Intervals.icu les fournit.</p>`;
 }
-
 export function renderKintraStrengthSummary({state,date}){
- const workouts=Array.isArray(state.hevySessions)&&state.hevySessions.length?
-   state.hevySessions:Array.isArray(state.strength)?state.strength:[];
- const week=workouts.filter(x=>String(x.startedAt||"").slice(0,10)>=dateAdd(date,-6)&&String(x.startedAt||"").slice(0,10)<=date);
- const sets=week.reduce((sum,x)=>sum+(x.exercises||[]).reduce((n,z)=>n+(z.sets?.length||0),0),0);
- const last=[...workouts].sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt)))[0];
+ const sessions=state.hevyKey?state.hevySessions:state.strength;
+ const list=Array.isArray(sessions)?sessions:[];
+ const recent=list.filter(x=>{const dt=String(x.startedAt||"").slice(0,10);return dt>=dateAdd(date,-6)&&dt<=date;});
+ const sets=recent.reduce((n,x)=>n+(x.exercises||[]).reduce((v,z)=>v+(z.sets?.length||0),0),0);
+ const last=[...list].sort((a,b)=>String(b.startedAt).localeCompare(String(a.startedAt)))[0];
  return `<article class="card kintra-strength-review">
-   <div class="between"><div><span class="eyebrow">MUSCULATION</span><h3 class="heading">Mon renforcement</h3></div>
-   <button class="textButton" data-action="hevy">${state.hevyKey?"Hevy Pro ✓":"Connecter Hevy ›"}</button></div>
-   <div class="kintra-strength-grid"><div><strong>${week.length}</strong><small>séances sur 7 jours</small></div>
-   <div><strong>${state.hevyKey?sets:"—"}</strong><small>séries importées</small></div></div>
-   ${last?`<p class="sub">Dernière séance visible : <strong>${safe(last.title||"Musculation")}</strong> · ${safe(String(last.startedAt).slice(0,10))}</p>`:
-   `<p class="sub">Connecte Hevy Pro pour retrouver tes séances. Aucune charge d'entraînement n'est inventée.</p>`}
-   ${state.hevyKey?`<p class="sub">Synchronisation en lecture seule. Historique limité aux 60 séances les plus récentes.</p>`:""}
+ <div class="between"><div><span class="eyebrow">MUSCULATION</span><h3 class="heading">Mon renforcement</h3></div>
+ <button class="textButton" data-action="hevy">${state.hevyKey?"Hevy Pro ✓":"Connecter Hevy ›"}</button></div>
+ <div class="kintra-strength-grid"><div><strong>${recent.length}</strong><small>séances cette semaine</small></div>
+ <div><strong>${state.hevyKey?sets:"—"}</strong><small>séries enregistrées</small></div></div>
+ ${last?`<p class="sub">Dernière séance : <strong>${safe(last.title||"Musculation")}</strong> · ${safe(String(last.startedAt).slice(0,10))}</p>`:""}
  </article>`;
 }
