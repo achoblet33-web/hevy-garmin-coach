@@ -27,6 +27,15 @@ export default {
   if(u.pathname==="/v3/status" && request.method==="GET")
     return asJson({ok:true,demo:true,version:"3.0.0-demo",intervals:{configured:true},hevy:{configured:true},watch:{directlyConnected:false}});
   if(u.pathname==="/v3/dashboard" && request.method==="GET")return asJson(mock());
+  if(/^\/v3\/activities\/[A-Za-z0-9_-]{1,80}\/intervals$/.test(u.pathname) && request.method==="GET"){
+    return asJson({ok:true,demo:true,id:u.pathname.split("/").at(-2),source:"DÉMO · synthétique",
+      intervalsAvailable:true,note:"Segments fictifs de démonstration, sans lien avec une activité Apple Watch.",
+      segments:[
+        {index:1,label:"DÉMO · Échauffement",durationSeconds:720,distanceMeters:1600,averageHeartRate:136,averagePaceMinKm:7.5},
+        {index:2,label:"DÉMO · 800 m",durationSeconds:224,distanceMeters:800,averageHeartRate:164,averagePaceMinKm:4.67},
+        {index:3,label:"DÉMO · Récupération",durationSeconds:120,distanceMeters:210,averageHeartRate:142,averagePaceMinKm:9.52}
+      ]});
+  }
   if((u.pathname==="/v3/workouts/preview" || u.pathname==="/v3/workouts/publish") && request.method==="POST"){
     try {
       const body=await request.json();
