@@ -7,6 +7,7 @@ import {renderHevyWorkouts,renderHevyWorkoutDetail} from "./kintra-hevy.mjs";
 import {generateMaintenancePlan,evaluateSportContext} from "./kintra-coach.mjs";
 import {renderKintraDashboard,renderKintraProgressSummary,renderKintraStrengthSummary} from "./kintra-hub.mjs";
 import {buildCoachReview,previewCoachAdjustment,renderCoachReview,renderCoachProposalPreview} from "./kintra-coach-v2.mjs";
+import {createPortableBackup,parsePortableBackup,MAX_BACKUP_BYTES} from "./local-backup.mjs";
 const STORAGE="trainsync-next-running-v1";
 const sample=()=>({mode:"event",maintenanceFocus:"balance",distanceKm:10,raceDate:add(today(),84),weeklyKm:23,frequency:3,longDay:6,availableDays:[1,3,6],targetTimeMinutes:50});
 const $=id=>document.getElementById(id), e=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -24,7 +25,7 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace}));}catch{}}
 function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today()});}
@@ -188,6 +189,10 @@ function profileView(){
  </div>`:""}
  <div class="card"><div class="heading">Mes programmes</div><button class="btn secondary full" data-action="history">Voir les anciennes versions</button>
  <p class="sub">Tes programmes et préférences sont enregistrés localement sur cet appareil. Les séances publiées doivent être vérifiées dans Intervals.icu.</p></div>
+ <div class="card" data-testid="kintra-backup-settings"><div class="heading">Sauvegarde & restauration</div>
+ <p class="sub">Sauvegarde tes programmes, anciennes versions et ressentis pour les transférer sur un autre appareil. Le fichier JSON n'est pas chiffré : conserve-le dans un endroit privé. Aucune clé API, trace GPS ou donnée de santé n'est incluse.</p>
+ <div class="actions"><button class="btn secondary" data-action="backupExport">Exporter ma sauvegarde</button>
+ <button class="btn secondary" data-action="backupRestore">Restaurer un fichier</button></div></div>
  <div class="card"><div class="heading">À propos de cette version</div><p class="sub">Interface de développement inspirée des principaux parcours d'applications de coaching running, conçue indépendamment. Pas d'enregistrement direct HealthKit dans cette PWA.</p><div class="warning">${DEMO?"Démonstration : données fictives. Aucune séance envoyée à la montre.":state.connected?"Mode actif : tes courses sont lues depuis Intervals.icu, confirme chaque publication.":"Mode actif non connecté : ouvre Mes connexions pour utiliser ton vrai compte."}</div></div>`;
 }
 function detailView(x){
@@ -279,6 +284,19 @@ function sheet(){
  <label>Adaptation<select id="adaptMode"><option value="easy">Uniquement facile</option><option value="off">Pause complète</option></select></label><label>Du<input id="adaptFrom" type="date" value="${today()}"></label><label>Au<input id="adaptTo" type="date" value="${add(today(),6)}"></label></div>
  <div class="actions"><button class="btn full" data-action="previewAdapt">Prévisualiser l'adaptation</button></div>`;
  if(sh==="coachProposal")body=renderCoachProposalPreview(state.coachPreview,state.coachProposal?.reason||"");
+ if(sh==="backupRestore")body=`<h2>Restaurer tes données locales</h2>
+ <p class="sub">Choisis une sauvegarde JSON créée par KINTRA. Tu pourras la vérifier avant d'écraser les plans et ressentis de cet appareil. Les clés API restent inchangées.</p>
+ <label>Fichier de sauvegarde<input id="kintraBackupFile" type="file" accept=".json,application/json"></label>
+ <div class="actions"><button class="btn full" data-action="backupInspect">Vérifier la sauvegarde</button>
+ <button class="btn secondary" data-action="close">Annuler</button></div>`;
+ if(sh==="backupConfirm")body=`<h2>Confirmer la restauration</h2>
+ <p class="sub">Fichier du ${e(state.backupCandidate?.createdAt||"date inconnue")}. Les programmes actuels et ressentis locaux seront remplacés, sans modifier tes comptes Intervals.icu ou Hevy.</p>
+ <div class="kintra-coach-v2-grid">
+ <div><small>Séances</small><strong>${state.backupCandidate?.count?.sessions??0}</strong></div>
+ <div><small>Anciennes versions</small><strong>${state.backupCandidate?.count?.versions??0}</strong></div>
+ <div><small>Ressentis</small><strong>${state.backupCandidate?.count?.feedback??0}</strong></div></div>
+ <div class="actions"><button class="btn" data-action="backupApply">Remplacer mes données locales</button>
+ <button class="btn secondary" data-action="backupCancel">Annuler sans modifier</button></div>`;
  if(sh==="preview")body=`<h2>Vérifier le nouveau plan</h2><p class="sub">${state.draft.totalWeeks} semaines · ${state.draft.mode==="maintenance"?"Maintien":state.draft.profile.distanceKm+" km"} · ${state.draft.profile.frequency} séances/semaine</p>
  <div class="statrow"><div class="stat"><strong>${state.draft.summary[0]?.plannedKm??0}</strong><small>Semaine 1</small></div><div class="stat"><strong>${state.draft.sessions.length}</strong><small>Créneaux</small></div><div class="stat"><strong>${state.draft.totalWeeks}</strong><small>Semaines</small></div></div>
  ${state.draft.notes.map(n=>`<p class="warning">${e(n)}</p>`).join("")}
@@ -448,6 +466,32 @@ function patchStatus(next){
 }
 async function perform(action,value){
  try{
+ if(action==="backupExport"){
+  const value=createPortableBackup({plan:state.plan,history:state.versionHistory,feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions});
+  const blob=new Blob([value],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="KINTRA-sauvegarde-"+today()+".json";document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);alertText("Fichier de sauvegarde créé. Conserve-le dans un endroit privé.");return;
+ }
+ if(action==="backupRestore"){state.backupCandidate=null;state.sheet="backupRestore";draw();return;}
+ if(action==="backupInspect"){
+  const file=$("kintraBackupFile")?.files?.[0];
+  if(!file)throw Error("Sélectionne d'abord un fichier JSON de sauvegarde.");
+  if(file.size>MAX_BACKUP_BYTES)throw Error("Le fichier est trop volumineux.");
+  state.backupCandidate=parsePortableBackup(await file.text());state.sheet="backupConfirm";draw();return;
+ }
+ if(action==="backupCancel"){state.backupCandidate=null;state.sheet=null;draw();return;}
+ if(action==="backupApply"){
+  const backup=state.backupCandidate;
+  if(!backup)throw Error("Aucune sauvegarde vérifiée.");
+  if(!confirm("Remplacer les programmes et ressentis stockés sur cet appareil ? Tes clés API ne seront pas touchées."))return;
+  const next={plan:backup.plan,history:backup.history,feedback:backup.feedback,adaptiveSuggestions:backup.adaptiveSuggestions,weatherPlace:state.weatherPlace};
+  localStorage.setItem(STORAGE,JSON.stringify(next));
+  state.plan=backup.plan;state.versionHistory=backup.history;state.feedback=backup.feedback;
+  state.adaptiveSuggestions=backup.adaptiveSuggestions;state.backupCandidate=null;state.selected=null;
+  state.week=0;state.chosenDay=today();state.sheet=null;state.tab="plan";
+  draw();alertText("Sauvegarde restaurée. Tes connexions restent inchangées.");return;
+ }
  if(action==="hevy"){state.sheet="hevy";draw();return;}
  if(action==="hevyConnect"){
   if(DEMO)throw Error("Connecte Hevy depuis la version active, pas la démonstration.");
@@ -551,7 +595,7 @@ async function perform(action,value){
   state.plan=state.draft;state.draft=null;state.week=0;state.chosenDay=today();state.sheet=null;state.tab="today";persist();draw();return;
  }
  if(action==="manage"||action==="adjust"||action==="history"||action==="connect"||action==="instant"){state.sheet=action;draw();return;}
- if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;draw();return;}
+ if(action==="close"){state.sheet=null;state.draft=null;state.watchPreview=null;state.coachProposal=null;state.coachPreview=null;state.backupCandidate=null;draw();return;}
  if(action==="calendar"){state.sheet=null;state.tab="plan";state.week=0;draw();return;}
  if(action==="status"){patchStatus(value);return;}
  if(action==="move"||action==="feedback"){state.sheet=action;draw();return;}
