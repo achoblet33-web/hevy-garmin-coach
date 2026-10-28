@@ -49,7 +49,9 @@ const app=createServer(async(req,res)=>{
     }catch(error){res.writeHead(500,{"Content-Type":"application/json"});return res.end(JSON.stringify({error:"Simulation temporairement indisponible."}));}
   }
   if(req.method!=="GET"&&req.method!=="HEAD"){res.writeHead(405);return res.end();}
-  const relative=decodeURIComponent(u.pathname==="/"?"/index.html":u.pathname);
+  let relative;
+  try{relative=decodeURIComponent(u.pathname==="/"?"/index.html":u.pathname);}
+  catch{res.writeHead(400,{"Content-Type":"text/plain"});return res.end("Chemin invalide");}
   const target=resolve(join(root,"."+relative));
   if(target!==root && !target.startsWith(root+sep)){res.writeHead(403);return res.end();}
   try {
