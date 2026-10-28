@@ -222,12 +222,13 @@ function detailView(x){
  <div class="card"><h3 class="heading">Détail de la séance</h3>
  ${steps.map((s,i)=>`<div class="step"><div class="number">${i+1}</div><div><strong>${e(s.name)}</strong><small>${e(s.value)}</small></div></div>`).join("")}
  <div class="callout">Pourquoi cette séance ?<br>${e(x.reason||"Développer progressivement les capacités de course.")}</div></div>
+ ${x.exportable?`<div class="card kintra-watch-card"><h3 class="heading">Courir avec l'Apple Watch</h3><p class="sub">Préparer une séance structurée dans Intervals.icu. Companion transmet ensuite la séance à l'application Exercice.</p>
+ <div class="warning">La structure d'export (durées, répétitions et zones) peut nécessiter un ajustement. La distance prévue du programme ne garantit pas une correspondance exacte avec l'export.</div>
+ <div class="actions"><button class="btn full" data-action="watch">Envoyer vers Apple Watch ↗</button></div></div>`:""}
  <div class="card"><h3 class="heading">Après ta course</h3><p class="sub">L'activité réelle doit être enregistrée par l'Apple Watch puis synchronisée. Le marquage manuel ne crée pas de course GPS.</p>
  <div class="actions"><button class="btn secondary" data-action="status:done">${x.status==="done"?"Annuler le marquage":"Marquer comme réalisée"}</button><button class="btn ghost" data-action="status:skipped">Ignorer</button></div>
  <div class="actions"><button class="btn ghost" data-action="feedback">Donner mon ressenti</button><button class="btn ghost" data-action="move">Déplacer</button></div></div>
- ${x.exportable?`<div class="card"><h3 class="heading">Courir avec l'Apple Watch</h3><p class="sub">Préparer une séance structurée dans Intervals.icu. Companion transmet ensuite la séance à l'application Exercice.</p>
- <div class="warning">La structure d'export (durées, répétitions et zones) peut nécessiter un ajustement. La distance prévue du programme ne garantit pas une correspondance exacte avec l'export.</div>
- <div class="actions"><button class="btn full" data-action="watch">Envoyer vers Apple Watch ↗</button></div></div>`:""}`;
+`;
 }
 function renderWizard(){
  const f=state.form,s=state.step;
