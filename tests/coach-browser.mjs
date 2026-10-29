@@ -188,7 +188,7 @@ try{
  await page.screenshot({path:"test-artifacts/kintra-progression-mobile.png",fullPage:true});
  console.log("PASS: summary, real splits and heart-rate views.");
  await page.locator('button[data-action^="activity:"]').first().click();
- await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
+ await page.locator('header button[data-action="backActivity"]').waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
  await page.locator('[data-testid="route-map"]').waitFor({timeout:12000});
  await page.locator('[data-testid="complete-run-metrics"]').waitFor({timeout:12000});
@@ -205,7 +205,7 @@ try{
  await page.locator("#runNote").fill("Séance contrôlée et ressenti noté.");
  await page.locator('button[data-action="saveActivityFeedback"]').click();
  assert.match(await page.locator("#app").innerText(),/Difficulté : 7\/10/);
- await page.locator('button[data-action="backActivity"]').click();
+ await page.locator('header button[data-action="backActivity"]').click();
  console.log("PASS: post-run report, fake lap segments and local RPE feedback.");
  await page.locator(".nav button[data-action='tab:today']").click();
  if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
@@ -251,7 +251,7 @@ try{
  await active.locator('[data-testid="hevy-workout-detail"]').waitFor();
  assert.match(await active.locator("#app").innerText(),/Back Squat/);
  assert.match(await active.locator("#app").innerText(),/90 kg/);
- await active.locator('button[data-action="backHevy"]').click();
+ await active.locator('header button[data-action="backHevy"]').click();
  console.log("PASS: Hevy Pro personal API integration works without Intervals connected (mocked API only).");
  await active.close();
  assert.deepEqual(errors,[],"No uncaught browser errors");
