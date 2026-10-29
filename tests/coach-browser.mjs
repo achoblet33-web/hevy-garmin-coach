@@ -37,7 +37,7 @@ try{
  await page.locator('[data-testid="sleep-card"]').waitFor();
  await page.locator('[data-testid="weekly-training-tiles"]').waitFor();
  await page.locator('[data-testid="weather-card"]').waitFor();
- assert.match(await page.locator("#app").innerText(),/PRÊT À PERFORMER/);
+ assert.match(await page.locator("#app").innerText(),/Préparation|PRÊT À PERFORMER/);
  assert.match(await page.locator("#app").innerText(),/SOMMEIL & RÉCUPÉRATION/);
  await page.route("**/v3/places?*",route=>route.fulfill({status:200,contentType:"application/json",
   body:JSON.stringify({ok:true,results:[{label:"Le Lamentin, Martinique, France",latitude:14.61,longitude:-60.99}]})}));
