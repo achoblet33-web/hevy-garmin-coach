@@ -109,6 +109,8 @@ jobs:
         run: node tests/kintra-reference-ui-browser.mjs
       - name: Verify persistent Intervals iPhone login, encrypted cache and offline return without keys
         run: node tests/kintra-persistent-session-browser.mjs
+      - name: Verify encrypted trusted-device reconnect with WebKit Safari-like engine
+        run: node tests/kintra-device-webkit-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
