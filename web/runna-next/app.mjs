@@ -1,5 +1,6 @@
 import {generateRunningPlan,applyTodayRecommendation,moveWorkout} from "../plan-engine.mjs";
 import {encryptApiKey,decryptApiKey} from "./credentials.mjs";
+import {saveDeviceCredential,readDeviceCredential,hasDeviceCredential,clearDeviceCredential,saveDeviceDashboard,readDeviceDashboard} from "./device-session.mjs";
 import {renderTrainingReview,renderActivityReport} from "./after-run.mjs";
 import {weekTrend} from "./kintra-insights.mjs";
 import {renderRaceSummary,formatTime} from "./kintra-presenter.mjs";
@@ -28,7 +29,7 @@ const LIVE_HOST="trainsync-staging-demo-staging.up.railway.app";
 const DEMO=new URLSearchParams(location.search).get("demo")==="1";
 const KEY_VAULT="trainsync-intervals-encrypted-v1";
 const HEVY_VAULT="kintra-hevy-encrypted-v1";
-let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,backupEncryptedText:null,backupReadyText:null,pairedRuns:{},linkCandidate:null};
+let state={tab:"today",progressTab:"summary",adaptiveSuggestions:true,step:0,form:{...sample()},plan:null,selected:null,week:0,chosenDay:today(),activities:[],strength:[],wellness:[],versionHistory:[],sheet:null,connected:false,apiOrigin:null,apiToken:null,deviceSaved:false,sessionRestoring:false,sessionStatus:"",localSnapshot:false,viewMode:"weeks",feedback:{},toast:"",sourceMode:DEMO?"demo":"disconnected",weather:null,weatherPlace:null,weatherResults:[],weatherQuery:"",hevyKey:null,hevySessions:[],hevyPartial:false,hevyFocus:null,intervalsStrength:[],activityDetail:null,mapEnabled:false,watchSuccess:null,planned:[],activityFocus:null,activitySegments:null,activityLoading:false,syncNote:"",coachProposal:null,coachPreview:null,backupCandidate:null,backupEncryptedText:null,backupReadyText:null,pairedRuns:{},linkCandidate:null};
 function readLocal(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");state.plan=saved.plan||null;state.versionHistory=(saved.history||[]).slice(-5);state.feedback=saved.feedback||{};state.adaptiveSuggestions=saved.adaptiveSuggestions!==false;state.weatherPlace=saved.weatherPlace||null;state.pairedRuns=saved.pairedRuns&&typeof saved.pairedRuns==="object"?saved.pairedRuns:{};}catch{}}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify({plan:state.plan,history:state.versionHistory.slice(-5),feedback:state.feedback,adaptiveSuggestions:state.adaptiveSuggestions,weatherPlace:state.weatherPlace,pairedRuns:state.pairedRuns}));}catch{throw Error("Impossible de sauvegarder sur cet appareil (stockage saturé ou indisponible). Exporte une sauvegarde chiffrée puis libère de l’espace.");}}
 function coachReview(){return buildCoachReview({plan:state.plan,activities:state.activities,strength:state.hevyKey?state.hevySessions:state.strength,wellness:state.wellness,date:today(),pairedRuns:state.pairedRuns});}
@@ -183,10 +184,11 @@ function profileView(){
  <div class="card kintra-profile-hero"><div class="row"><div class="iconTile">◎</div><div><strong>KINTRA Coach</strong><p class="sub">${p?(p.mode==="maintenance"?"Mode maintien":km(p.distanceKm)+" km")+" · "+p.frequency+" sorties/semaine":"Aucun plan actif"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="setup">${p?"Créer un autre programme":"Définir mon objectif"}</button></div></div>
  <div class="card kintra-settings-card"><div class="heading">Mes connexions</div><div class="row" style="margin-bottom:12px"><div class="iconTile">⌚</div><div><strong>Apple Watch</strong><p class="sub">Séances via Intervals.icu Companion</p></div></div>
- <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?"Compte Intervals.icu connecté":"Connexion requise pour les activités réelles"}</p></div></div>
+ <div class="row" style="margin-bottom:12px"><div class="iconTile">↗</div><div><strong>Intervals.icu</strong><p class="sub">${state.connected?(state.localSnapshot?"Dernières données locales · connexion à vérifier":"Compte Intervals.icu connecté · synchronisation active"):state.deviceSaved?"Compte mémorisé · restauration automatique au lancement":state.sessionRestoring?"Restauration de la connexion…":"Compte non connecté"}</p></div></div>
  <div class="row"><div class="iconTile">▣</div><div><strong>Hevy</strong><p class="sub">${state.hevyKey?"Hevy Pro connecté · séances de musculation synchronisées":localStorage.getItem(HEVY_VAULT)?"Connexion chiffrée à déverrouiller":"Connexion facultative · API Hevy Pro"}</p></div></div>
  <div class="actions"><button class="btn secondary" data-action="connect">Intervals.icu</button><button class="btn secondary" data-action="hevy">Hevy Pro</button></div>
  <div class="actions"><button class="btn full" data-action="showHevy">Voir mes séances de musculation ›</button></div></div>
+ ${state.sessionStatus?`<div class="card kintra-session-status" role="status"><span class="eyebrow">Synchronisation</span><p class="sub">${e(state.sessionStatus)}</p></div>`:""}
  ${state.watchSuccess?`<div class="card">
  <div class="eyebrow">Séance préparée pour l'Apple Watch</div>
  <h3 class="heading">${state.watchSuccess.real?"Enregistrée sur Intervals.icu":"Publication simulée"}</h3>
@@ -282,11 +284,15 @@ function normalPage(){
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
  }
- return `<div class="app kintra-ui-17"><header class="top kintra-top">
- <img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">
- <div class="kintra-page-name">${state.selected?"Séance":state.tab==="today"?"Aujourd'hui":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Mon profil"}</div>
+ const innerScreen=state.selected||state.activityFocus||state.hevyFocus!==null||state.tab!=="today";
+ const backAction=state.selected?"back":state.activityFocus?"backActivity":state.hevyFocus!==null?"backHevy":"tab:today";
+ const screenTitle=state.selected?"Séance":state.activityFocus?"Analyse":state.hevyFocus!==null?"Musculation":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Plus";
+ return `<div class="app kintra-ui-17 kintra-ui-18"><header class="top kintra-top ${innerScreen?"kintra-top-secondary":""}">
+ ${innerScreen?`<button class="kintra-back-control" data-action="${backAction}" aria-label="Retour">‹</button>`:
+  `<img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">`}
+ <div class="kintra-page-name">${innerScreen?screenTitle:""}</div>
  <button class="circle" data-action="tab:profile" aria-label="Mon profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></button></header>
- <main class="content">${DEMO?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre. <button class="textButton" data-action="goLive">Ouvrir la version active</button></div>`:!state.connected?`<div class="callout">Mode actif · Connecte ton compte Intervals.icu pour synchroniser les courses et envoyer des séances à l’Apple Watch. <button class="textButton" data-action="connect">Connecter maintenant ›</button></div>`:""}${content}</main></div>
+ <main class="content">${state.sessionRestoring?`<div class="kintra-sync-notice" role="status">↻ Reconnexion sécurisée et synchronisation en cours…</div>`:""}${state.localSnapshot?`<div class="kintra-sync-notice" role="status">Dernière copie chiffrée locale · ${e(String(state.syncedAt||"").slice(0,16).replace("T"," "))}. Données à actualiser.</div>`:""}${DEMO?`<div class="kintra-demo-banner"><span>● Démonstration · données fictives</span><button class="textButton" data-action="goLive">Version active ›</button></div>`:!state.connected?`<div class="kintra-demo-banner"><span>Intervals.icu non connecté</span><button class="textButton" data-action="connect">Connecter ›</button></div>`:""}${content}</main></div>
  <nav class="nav" aria-label="Navigation principale">${[
   ["today","Aujourd'hui",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>'],
   ["plan","Coach",'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'],
@@ -359,25 +365,28 @@ function sheet(){
   <label style="margin-top:15px">Clé API personnelle Intervals.icu
     <input id="apiToken" type="password" placeholder="Colle ta clé Intervals.icu" autocomplete="off" autocapitalize="none" spellcheck="false">
   </label>
+  <label class="kintra-trusted-device"><input id="rememberIntervalsDevice" type="checkbox" checked><span><strong>Rester connecté sur cet appareil</strong><small>Chiffrement local sur cet iPhone, reconnexion automatique à la prochaine ouverture. À activer uniquement sur un appareil personnel déverrouillé.</small></span></label>
   <label style="margin-top:12px">Phrase secrète pour sauvegarder la connexion (facultatif)
     <input id="apiVaultPass" type="password" placeholder="10 caractères minimum" autocomplete="new-password" spellcheck="false">
   </label>
-  <p class="sub">Sans phrase secrète, la clé reste seulement en mémoire jusqu'à la fermeture ou au rechargement. Avec une phrase secrète, elle est chiffrée sur cet iPhone et tu pourras la déverrouiller à la prochaine ouverture.</p>
+  <p class="sub">Avec « Rester connecté », ta clé est chiffrée et conservée localement : aucune phrase secrète n’est nécessaire à chaque ouverture. Tu peux aussi créer une sauvegarde protégée par phrase secrète. Effacer les données Safari ou changer d’appareil peut supprimer la session.</p>
   <div class="actions"><button class="btn full" data-action="connectNow">Connecter mon compte</button></div>
   ${localStorage.getItem(KEY_VAULT)?`<div class="line"></div><strong>Connexion sauvegardée sur cet appareil</strong>
   <label>Phrase de déverrouillage<input id="apiUnlockPass" type="password" autocomplete="off" placeholder="Ta phrase secrète"></label>
+  <label class="kintra-trusted-device"><input id="rememberIntervalsUnlock" type="checkbox" checked><span><strong>Rester connecté ensuite</strong><small>Ne plus saisir la phrase secrète à chaque ouverture sur cet appareil.</small></span></label>
   <div class="actions"><button class="btn secondary full" data-action="unlockNow">Déverrouiller ma connexion</button></div>`:""}
   ${state.connected?`<div class="callout">Compte Intervals.icu connecté. Les activités et les séances sont réelles.</div>`:""}
-  <div class="actions"><button class="btn ghost full" data-action="disconnect">Déconnecter et oublier la clé sauvegardée</button></div>
+  <div class="actions"><button class="btn ghost full" data-action="disconnect">Se déconnecter et supprimer les données locales</button></div>
   <p class="sub"><strong>Apple Watch :</strong> ouvre Intervals.icu Companion → More → Workout Settings → active « Automatically Sync Planned Workouts to Apple Watch ».</p>`;
  if(sh==="hevy")body=`<h2>Connecter Hevy Pro</h2>
  <p class="sub">Le service Hevy propose une API personnelle aux comptes Pro. Les séances sont lues uniquement en consultation, jamais modifiées.</p>
  <div class="callout">Clé disponible sur <strong>hevy.com/settings?developer</strong> avec un abonnement Hevy Pro. Ne transmets jamais cette clé dans le chat.</div>
  <label style="margin-top:12px">Clé API Hevy Pro<input id="hevyToken" type="password" placeholder="UUID de ta clé Hevy" autocomplete="off"></label>
+ <label class="kintra-trusted-device"><input id="rememberHevyDevice" type="checkbox" checked><span><strong>Rester connecté à Hevy Pro</strong><small>Clé chiffrée sur cet appareil. Lecture seule.</small></span></label>
  <label style="margin-top:12px">Phrase secrète de sauvegarde (facultatif)<input id="hevyPass" type="password" autocomplete="new-password" placeholder="10 caractères minimum"></label>
  <div class="actions"><button class="btn full" data-action="hevyConnect">Connecter Hevy Pro</button></div>
  ${localStorage.getItem(HEVY_VAULT)?`<label>Déverrouiller une clé sauvegardée<input id="hevyUnlockPass" type="password" autocomplete="off"></label>
- <div class="actions"><button class="btn secondary full" data-action="hevyUnlock">Déverrouiller Hevy</button></div>`:""}
+ <label class="kintra-trusted-device"><input id="rememberHevyUnlock" type="checkbox" checked><span>Rester connecté sur cet appareil</span></label><div class="actions"><button class="btn secondary full" data-action="hevyUnlock">Déverrouiller Hevy</button></div>`:""}
  <div class="actions"><button class="btn ghost full" data-action="hevyDisconnect">Déconnecter Hevy</button></div>`;
  if(sh==="weatherLocation")body=`<h2>Choisir ma météo</h2>
  <p class="sub">Recherche une ville, ou autorise ponctuellement le GPS. Le lieu choisi reste sur cet appareil. Les coordonnées transmises au service météo sont arrondies.</p>
@@ -495,10 +504,20 @@ async function sync(){
   state.planned=Array.isArray(data.planned)?data.planned:[];
   state.syncedAt=data.syncedAt||new Date().toISOString();
   state.sourceMode=data.demo?"demo":data.ok?"intervals":"partial";
+  state.localSnapshot=false;state.sessionStatus=data.demo?"Mode démonstration":"Dernière synchronisation : "+String(state.syncedAt||"").slice(0,16).replace("T"," ");
   state.syncNote=(data.warnings||[]).join(" · ");
+  if(!DEMO&&state.deviceSaved){
+   try{await saveDeviceDashboard({activities:state.activities,wellness:state.wellness,
+    strength:state.intervalsStrength,planned:state.planned,syncedAt:state.syncedAt});}
+   catch{state.syncNote+=(state.syncNote?" · ":"")+"Dernière copie hors ligne non mise à jour.";}
+  }
   if(state.hevyKey){try{await syncHevy();}catch(error){state.syncNote+=" · Hevy : "+error.message;}}
   draw();
- }catch(err){state.syncNote=err.message;alertText("Synchronisation : "+err.message);}
+ }catch(err){
+  state.syncNote=err.message;
+  if(state.localSnapshot)state.sessionStatus="Réseau indisponible : dernière synchronisation conservée sur cet appareil.";
+  alertText("Synchronisation : "+err.message);
+ }
 }
 function patchStatus(next){
  const id=state.selected;
@@ -569,6 +588,8 @@ async function perform(action,value){
   const previous=state.hevyKey;state.hevyKey=key;
   try{await syncHevy();}catch(error){state.hevyKey=previous;throw error;}
   if(pass)localStorage.setItem(HEVY_VAULT,await encryptApiKey(key,pass));
+  if($("rememberHevyDevice")?.checked)await saveDeviceCredential("hevy",key);
+  else await clearDeviceCredential("hevy");
   state.sheet=null;draw();alertText("Hevy Pro connecté : tes séances de musculation sont visibles.");return;
  }
  if(action==="hevyUnlock"){
@@ -577,11 +598,12 @@ async function perform(action,value){
   const key=await decryptApiKey(stored,$("hevyUnlockPass")?.value||"");
   state.hevyKey=key;
   try{await syncHevy();}catch(error){state.hevyKey=null;throw error;}
+  if($("rememberHevyUnlock")?.checked)await saveDeviceCredential("hevy",key);
   state.sheet=null;draw();alertText("Compte Hevy déverrouillé.");return;
  }
  if(action==="hevyDisconnect"){
   state.hevyKey=null;state.hevySessions=[];state.hevyFocus=null;state.hevyPartial=false;state.strength=state.intervalsStrength;
-  localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
+  localStorage.removeItem(HEVY_VAULT);await clearDeviceCredential("hevy");state.sheet=null;draw();return;
  }
  if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];state.weatherQuery="";draw();return;}
  if(action==="weatherSearch"){await searchWeatherPlace();return;}
@@ -761,7 +783,12 @@ async function perform(action,value){
   try{const status=await api("/status");if(!status?.ok||!status?.intervals?.ok)throw Error("Authentification non confirmée.");}
   catch(error){state.connected=!!previous;state.apiToken=previous;throw error;}
   if(pass){const encrypted=await encryptApiKey(key,pass);localStorage.setItem(KEY_VAULT,encrypted);}
-  state.sheet=null;state.tab="activities";await sync();alertText("Compte Intervals.icu connecté. Tu peux maintenant publier tes séances.");return;
+  if($("rememberIntervalsDevice")?.checked){
+   await saveDeviceCredential("intervals",key);state.deviceSaved=true;
+  }else{await clearDeviceCredential("intervals");state.deviceSaved=false;}
+  state.localSnapshot=false;state.sessionStatus="Authentification Intervals.icu confirmée.";
+  state.sheet=null;state.tab="activities";await sync();
+  alertText(state.deviceSaved?"Compte Intervals.icu connecté et conservé sur cet appareil.":"Compte connecté pour cette session.");return;
  }
  if(action==="unlockNow"){
   if(DEMO)throw Error("Ouvre la version active.");
@@ -769,13 +796,19 @@ async function perform(action,value){
   const pass=$("apiUnlockPass").value;
   const key=await decryptApiKey(vault,pass);
   state.apiToken=key;state.connected=true;
-  try{const status=await api("/status");if(!status?.ok)throw Error("Connexion non confirmée.");}
+  try{const status=await api("/status");if(!status?.ok||!status?.intervals?.ok)throw Error("Connexion non confirmée.");}
   catch(error){state.connected=false;state.apiToken=null;throw error;}
-  state.sheet=null;state.tab="activities";await sync();alertText("Connexion Intervals.icu déverrouillée.");return;
+  if($("rememberIntervalsUnlock")?.checked){
+   await saveDeviceCredential("intervals",key);state.deviceSaved=true;
+  }
+  state.localSnapshot=false;state.sessionStatus="Authentification Intervals.icu confirmée.";
+  state.sheet=null;state.tab="activities";await sync();alertText("Connexion Intervals.icu déverrouillée et actualisée.");return;
  }
  if(action==="disconnect"){
+  if(!confirm("Déconnecter Intervals.icu et effacer sa clé enregistrée ainsi que sa copie locale ? Tes plans et sauvegardes personnelles seront conservés."))return;
+  await clearDeviceCredential("intervals");state.deviceSaved=false;state.localSnapshot=false;state.sessionStatus="";
   state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode=DEMO?"demo":"disconnected";
-  state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
+  state.activities=[];state.strength=state.hevyKey?state.hevySessions:[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
   localStorage.removeItem(KEY_VAULT);draw();if(DEMO)await sync();return;
  }
  }catch(error){const msg=error?.message||"Action impossible";if(state.wizard&&$("wizardError")){$("wizardError").hidden=false;$("wizardError").textContent=msg;}else alertText(msg);}
@@ -785,6 +818,48 @@ document.addEventListener("click",ev=>{
  const [action,...rest]=trigger.dataset.action.split(":");
  perform(action,rest.join(":"));
 });
+async function restoreDeviceSession(){
+ if(DEMO)return;
+ try{
+  state.deviceSaved=await hasDeviceCredential("intervals");
+  const hasHevy=await hasDeviceCredential("hevy");
+  if(!state.deviceSaved&&!hasHevy)return;
+  state.sessionRestoring=true;draw();
+  if(state.deviceSaved){
+   const [token,cached]=await Promise.all([readDeviceCredential("intervals"),readDeviceDashboard()]);
+   if(token){
+    state.apiToken=token;state.connected=true;state.sessionStatus="Connexion mémorisée sur cet appareil.";
+    if(cached){
+     state.activities=uniqueRunningActivities(cached.activities);
+     state.wellness=cached.wellness;state.intervalsStrength=cached.strength;
+     state.planned=cached.planned;state.syncedAt=cached.syncedAt;
+     state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
+     state.sourceMode="cached";state.localSnapshot=true;
+    }
+   }
+  }
+  if(hasHevy)try{state.hevyKey=await readDeviceCredential("hevy");}
+   catch{state.sessionStatus+=" · Hevy : données chiffrées non lisibles.";}
+  state.sessionRestoring=false;draw();
+  if(state.connected){
+   try{
+    const status=await api("/status");
+    if(!status?.ok||!status?.intervals?.ok)throw Error("Compte Intervals.icu non validé.");
+    await sync();
+   }catch(error){
+    state.syncNote=error.message;
+    state.sessionStatus="Connexion mémorisée, mais actualisation impossible : "+error.message;
+    // Network errors must not delete a valid encrypted key or cached activity history.
+    draw();
+   }
+  }else if(state.hevyKey)try{await syncHevy();}catch{}
+ }catch(error){
+  state.sessionRestoring=false;
+  state.sessionStatus="Restauration automatique indisponible : "+(error?.message||"erreur locale")+
+   ". Ouvre Plus → Intervals.icu pour reconnecter le compte.";
+  draw();
+ }
+}
 function start(){
  readLocal();
  const base=state.plan?.sessions.find(x=>x.date>=today())?.week;
@@ -793,7 +868,15 @@ function start(){
   try{state.plan=generateRunningPlan(sample(),today());state.week=0;}catch{}
  }
  draw();if(DEMO)sync();
+ else void restoreDeviceSession();
  if(state.weatherPlace)refreshWeather(state.weatherPlace).catch(()=>{});
 }
 start();
+let lastResume=0;
+function onResume(){
+ if(DEMO||!state.connected||document.visibilityState!=="visible"||Date.now()-lastResume<120000)return;
+ lastResume=Date.now();void sync();
+}
+document.addEventListener("visibilitychange",onResume);
+window.addEventListener("online",onResume);
 if ("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});

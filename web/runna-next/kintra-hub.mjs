@@ -85,6 +85,7 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
  <button class="textButton" data-action="showHevy">Détails Hevy ›</button></article>
  </div>
  ${weatherCard(state)}
+ <details class="kintra-deep-dive" data-testid="advanced-today"><summary>Mon programme et ma semaine</summary><div class="kintra-deep-body">
  ${program?program():""}
  <div class="kintra-sheet"><div class="between"><strong>Ta semaine</strong><button class="textButton" data-action="tab:plan">Coach ›</button></div>
  ${plan?weekstrip(state.chosenDay):`<p class="sub">Créer un programme événement ou maintien.</p>`}</div>
@@ -93,6 +94,7 @@ export function renderKintraDashboard({state,plan,date,weekstrip,sessionCard,pro
  <article class="kintra-coach-tip"><div class="eyebrow">CONSEIL DU COACH</div><h3>${safe(state.adaptiveSuggestions?advice.title:"Conseils désactivés")}</h3>
  <p class="sub">${safe(state.adaptiveSuggestions?advice.reason:"Tu peux activer les conseils dans Coach.")}</p>
  <div class="actions"><button class="btn secondary" data-action="adjust" ${plan?"":"disabled"}>Adapter mon entraînement</button></div></article>
+ </div></details>
  <p class="kintra-disclaimer">Avis sportifs non médicaux. L'heure météo et l'état de récupération sont indicatifs, à confirmer avec ton ressenti.</p>`;
 }
 export function renderKintraProgressSummary({state,date}){

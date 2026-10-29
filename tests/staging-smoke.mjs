@@ -19,7 +19,7 @@ assert.equal(health.mode,"active-capable");
 assert.equal(health.keyStoredOnServer,false);
 console.log("OK: stage health");
 const html=await (await check("/?demo=1")).text();
-assert.match(html,/\.\/app\.mjs\?v=(13|14|15|16|17)/);
+assert.match(html,/\.\/app\.mjs\?v=(13|14|15|16|17|18)/);
 const stageVersion=Number(html.match(/app\.mjs\?v=(\d+)/)?.[1]||0);
 const appResponse=await check("/runna-next/app.mjs?v="+stageVersion);
 assert.match(appResponse.headers.get("content-type")||"",/javascript/i,"ES module must have correct MIME");
@@ -77,6 +77,13 @@ if(stageVersion>=14){
  assert.match(coachV2,/buildCoachReview/);
  assert.match(app,/renderCoachReview/);
 }
+if(stageVersion>=18){
+ const design18=await (await check("/runna-next/kintra-design-v18.css?v=18")).text();
+ const device=await (await check("/runna-next/device-session.mjs")).text();
+ assert.match(design18,/KINTRA v18/);
+ assert.match(device,/non-extractable AES-GCM/);
+ assert.match(app,/restoreDeviceSession/);
+}
 if(stageVersion>=17){
  const design=await (await check("/runna-next/kintra-design-v17.css?v=17")).text();
  assert.match(design,/KINTRA 17/);
@@ -112,7 +119,7 @@ assert.match(css,/--accent-strong:#b5163c/);
 assert.match(html,/#faf8f9/);
 assert.match(html,/KINTRA/);
 const active=await (await check("/")).text();
-assert.match(active,/app\.mjs\?v=(13|14|15|16|17)/);
+assert.match(active,/app\.mjs\?v=(13|14|15|16|17|18)/);
 const vault=await (await check("/runna-next/credentials.mjs")).text();
 assert.match(vault,/AES-GCM/);
 console.log("OK: main URL serves live-ready app with encrypted client vault");
