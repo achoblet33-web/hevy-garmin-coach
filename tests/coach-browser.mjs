@@ -10,6 +10,9 @@ try{
  page.on("dialog",dialog=>dialog.accept());
  await page.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded",timeout:40000});
  await page.locator(".nav button[data-action='tab:plan']").waitFor({timeout:15000});
+ // KINTRA v18 keeps the program below a collapsible disclosure to match the reference iPhone board.
+ const advanced=page.locator(".kintra-deep-dive summary");
+ if(await advanced.count())await advanced.click();
  assert.match(await page.locator("#app").innerText(),/Objectif 10 km/);
  const visual=await page.evaluate(()=>{
   const root=getComputedStyle(document.documentElement);
