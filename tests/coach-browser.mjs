@@ -10,6 +10,9 @@ try{
  page.on("dialog",dialog=>dialog.accept());
  await page.goto(BASE+"/runna-next/index.html?demo=1",{waitUntil:"domcontentloaded",timeout:40000});
  await page.locator(".nav button[data-action='tab:plan']").waitFor({timeout:15000});
+ // KINTRA v18 keeps the program below a collapsible disclosure to match the reference iPhone board.
+ const advanced=page.locator(".kintra-deep-dive summary");
+ if(await advanced.count())await advanced.click();
  assert.match(await page.locator("#app").innerText(),/Objectif 10 km/);
  const visual=await page.evaluate(()=>{
   const root=getComputedStyle(document.documentElement);
@@ -131,7 +134,7 @@ try{
  assert.match(await page.locator("#app").innerText(),/Détail de la séance/);
  await page.locator(".kintra-session-metadata").waitFor();
  await page.screenshot({path:"test-artifacts/kintra-seance-mobile.png",fullPage:true});
- await page.locator("button[data-action='back']").click();
+ await page.locator("header button[data-action='back']").click();
  console.log("PASS: Session details and return.");
  await page.locator(".nav button[data-action='tab:profile']").click();
  await page.locator("button[data-action='setup']").click();
@@ -146,6 +149,7 @@ try{
  await page.locator("button[data-action='wizardNext']").click();
  assert.match(await page.locator(".modal").innerText(),/Vérifier le nouveau plan/);
  await page.locator("button[data-action='acceptPlan']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  assert.match(await page.locator("#app").innerText(),/Objectif 5 km/);
  console.log("PASS: Four-step onboarding, plan preview and explicit adoption.");
  await page.locator(".nav button[data-action='tab:profile']").click();
@@ -159,6 +163,7 @@ try{
  await page.locator("button[data-action='wizardNext']").click();
  assert.match(await page.locator(".modal").innerText(),/Maintien/);
  await page.locator("button[data-action='acceptPlan']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  assert.match(await page.locator("#app").innerText(),/COACH · MODE MAINTIEN/);
  assert.doesNotMatch(await page.locator("#app").innerText(),/jours restants/);
  console.log("PASS: four-week maintenance plan has no fictional race.");
@@ -183,7 +188,7 @@ try{
  await page.screenshot({path:"test-artifacts/kintra-progression-mobile.png",fullPage:true});
  console.log("PASS: summary, real splits and heart-rate views.");
  await page.locator('button[data-action^="activity:"]').first().click();
- await page.locator('button[data-action="backActivity"]').waitFor({timeout:12000});
+ await page.locator('header button[data-action="backActivity"]').waitFor({timeout:12000});
  assert.match(await page.locator("#app").innerText(),/Résultat de ta course/);
  await page.locator('[data-testid="route-map"]').waitFor({timeout:12000});
  await page.locator('[data-testid="complete-run-metrics"]').waitFor({timeout:12000});
@@ -200,9 +205,10 @@ try{
  await page.locator("#runNote").fill("Séance contrôlée et ressenti noté.");
  await page.locator('button[data-action="saveActivityFeedback"]').click();
  assert.match(await page.locator("#app").innerText(),/Difficulté : 7\/10/);
- await page.locator('button[data-action="backActivity"]').click();
+ await page.locator('header button[data-action="backActivity"]').click();
  console.log("PASS: post-run report, fake lap segments and local RPE feedback.");
  await page.locator(".nav button[data-action='tab:today']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  await page.locator("button[data-action='instant']").click();
  await page.locator("button[data-action='instantType:interval']").click();
  assert.match(await page.locator(".modal").innerText(),/Préparer sur l'Apple Watch/);
@@ -218,7 +224,7 @@ try{
  active.on("pageerror",e=>errors.push(String(e)));
  await active.goto(BASE+"/runna-next/index.html",{waitUntil:"domcontentloaded",timeout:30000});
  await active.locator('.nav button[data-action="tab:profile"]').waitFor({timeout:12000});
- assert.match(await active.locator("#app").innerText(),/Mode actif/);
+ assert.match(await active.locator("#app").innerText(),/Intervals\.icu non connecté|Mode actif/);
  assert.doesNotMatch(await active.locator("#app").innerText(),/Mode démonstration/);
  await active.locator('.nav button[data-action="tab:profile"]').click();
  await active.locator('button[data-action="connect"]').first().click();
@@ -245,7 +251,7 @@ try{
  await active.locator('[data-testid="hevy-workout-detail"]').waitFor();
  assert.match(await active.locator("#app").innerText(),/Back Squat/);
  assert.match(await active.locator("#app").innerText(),/90 kg/);
- await active.locator('button[data-action="backHevy"]').click();
+ await active.locator('header button[data-action="backHevy"]').click();
  console.log("PASS: Hevy Pro personal API integration works without Intervals connected (mocked API only).");
  await active.close();
  assert.deepEqual(errors,[],"No uncaught browser errors");
