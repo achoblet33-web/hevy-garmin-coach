@@ -47,17 +47,20 @@ try{
  await mkdir("test-artifacts",{recursive:true});
  await page.screenshot({path:"test-artifacts/kintra-v18-connected-iphone.png",fullPage:true});
  await page.reload({waitUntil:"domcontentloaded"});
+ await page.locator('.nav button[data-action="tab:activities"]').click();
  await page.getByText("Sortie réelle simulée").first().waitFor({timeout:20000});
  await page.locator('.nav button[data-action="tab:profile"]').click();
  await page.getByText(/Compte Intervals\.icu connecté · synchronisation active/).waitFor();
  await page.locator('.nav button[data-action="tab:activities"]').click();
  available=false;
  await page.reload({waitUntil:"domcontentloaded"});
+ await page.locator('.nav button[data-action="tab:activities"]').click();
  await page.getByText("Sortie réelle simulée").first().waitFor({timeout:20000});
  await page.getByText(/Dernière copie chiffrée locale/).first().waitFor({timeout:20000});
  await page.screenshot({path:"test-artifacts/kintra-v18-cached-iphone.png",fullPage:true});
  // Reconnection must recover without retyping the API key, and refresh cached status.
  available=true;await page.reload({waitUntil:"domcontentloaded"});
+ await page.locator('.nav button[data-action="tab:activities"]').click();
  await page.getByText("Sortie réelle simulée").first().waitFor();
  await page.getByText(/Dernière copie chiffrée locale/).waitFor({state:"detached",timeout:20000});
  await page.locator('.nav button[data-action="tab:profile"]').click();
