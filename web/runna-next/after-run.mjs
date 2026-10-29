@@ -52,8 +52,7 @@ export function renderActivityReport({activity,activities=[],planned=[],plan=nul
    <td>${lap.averageHeartRate==null?"—":nf(lap.averageHeartRate)+" bpm"}</td></tr>`).join("")}</tbody>
  </table></div>`:"";
 
- return `<button class="textButton" data-action="backActivity">‹ Retour aux activités</button>
- <div class="detailsHeader"><div class="eyebrow">Séance terminée · ${date(activity.startedAt)}</div>
+ return `<div class="detailsHeader"><div class="eyebrow">Séance terminée · ${date(activity.startedAt)}</div>
   <h2>${e(activity.title||"Ma course")}</h2>
   <p class="sub">${known?"Associée à une séance du calendrier Intervals.icu ✓":"Association au calendrier non confirmée"}</p>
   <div class="statrow"><div class="stat"><strong>${nf(info.distanceKm)}</strong><small>Km courus</small></div>
