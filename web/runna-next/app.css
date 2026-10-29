@@ -1,0 +1,354 @@
+:root{color-scheme:dark;--bg:#100c12;--surface:#21151e;--surface2:#2b1a25;--surface3:#3a2330;--border:#543644;--text:#fff4f5;--muted:#bfa9b2;--accent:#ff7c89;--accent-strong:#cd2f47;--rose:#ffb2b9;--coral:#ff9b91;--yellow:#ffc077;--orange:#ff927e;--violet:#da8fae;--blue:#f2a0a7;--nav:rgba(26,12,20,.97)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);font-family:system-ui,-apple-system,"SF Pro Display","Segoe UI",sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}body{padding-bottom:calc(90px + env(safe-area-inset-bottom))}a{color:var(--accent)}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}input,select{color:var(--text);background:#1a1018;border:1px solid #74505e;padding:13px 12px;border-radius:12px;width:100%;min-height:46px}input[type=checkbox]{width:20px;height:20px;min-height:20px;accent-color:var(--accent)}input[type=date]{color-scheme:dark}select{appearance:auto}label{font-size:13px;color:#f1dce2;display:grid;gap:6px;min-width:0}.app{max-width:720px;margin:0 auto}.top{height:76px;padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}.top h1{font-size:22px;font-weight:820;letter-spacing:-.7px;margin:0}.top small{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);font-weight:800}.circle{border:1px solid var(--border);width:43px;height:43px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:#fff1f4;font-size:22px}.content{padding:4px 16px 24px;display:grid;gap:15px}.card{background:var(--surface);border-radius:21px;padding:18px;border:1px solid #3c2732;overflow:hidden}.card + .card{margin-top:0}.heading{font-size:20px;font-weight:820;letter-spacing:-.6px;margin:0 0 10px}.sub{font-size:13px;color:var(--muted);line-height:1.55;margin:5px 0}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:830}.hero{background:linear-gradient(130deg,#8f253e 0%,#4d1b30 65%,#2d1928);padding:21px;border:1px solid #a8405b}.hero h2{font-size:29px;letter-spacing:-1px;line-height:1.1;margin:10px 0}.hero .sub{color:#fbe0e5}.textButton{border:none;background:none;color:#ffc1c5;font-weight:800;padding:6px 0;text-align:left}.btn{border:0;border-radius:15px;padding:14px 16px;background:var(--accent-strong);color:#fff9fa;font-weight:820;font-size:14px;min-height:49px}.btn.secondary{background:#3c2532;color:var(--text);border:1px solid #634051}.btn.ghost{background:transparent;border:1px solid #775364;color:var(--text)}.btn.full{width:100%}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.actions .btn{flex:1 1 140px}.between{display:flex;justify-content:space-between;align-items:center;gap:10px}.stack{display:grid;gap:12px}.pill{display:inline-flex;padding:6px 10px;border-radius:99px;background:#562a3a;color:#ffc1cb;font-size:11px;font-weight:800}.pill.muted{background:#47323f;color:#ffe1e8}.weekstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.weekstrip button{border:1px solid #543844;background:#291923;color:var(--muted);padding:11px 1px 9px;border-radius:14px;display:grid;justify-items:center;gap:7px}.weekstrip button.active{background:#632d41;border-color:var(--accent);color:#fff3f6}.weekstrip small{font-size:10px}.weekstrip strong{font-size:16px}.dot{width:5px;height:5px;background:#826672;border-radius:50%}.dot.on{background:var(--accent)}.progress{height:7px;border-radius:20px;background:#533645;overflow:hidden;margin:10px 0 12px}.progress span{display:block;height:100%;border-radius:20px;background:var(--accent)}.statrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.stat{padding:13px;background:#382430;border-radius:14px}.stat strong{display:block;font-size:20px}.stat small{color:#c9acb6;font-size:10px}.training{display:flex;width:100%;gap:12px;align-items:center;background:var(--surface);border:1px solid #563b4a;border-radius:17px;padding:14px;text-align:left;color:var(--text)}.training .strip{width:5px;align-self:stretch;border-radius:6px;min-height:53px;background:var(--accent)}.training strong{display:block;font-size:15px}.training small{display:block;font-size:12px;color:var(--muted);margin-top:5px}.training .arrow{margin-left:auto;color:#edd2da;font-size:25px}.training.selected{background:#482433;border-color:#d16478}.sectionTitle{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 3px}.sectionTitle h2{font-size:18px;font-weight:820;margin:0;letter-spacing:-.4px}.row{display:flex;align-items:center;gap:12px}.iconTile{background:#422738;border-radius:14px;width:45px;height:45px;display:grid;place-items:center;font-size:23px;flex-shrink:0}.callout{background:#402532;border-left:3px solid var(--accent);padding:14px;border-radius:0 13px 13px 0;font-size:13px;line-height:1.5}.warning{background:#503329;color:#ffe3bb;padding:12px;border-radius:12px;font-size:12px;line-height:1.5}.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,720px);z-index:20;background:var(--nav);display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #4e3340;padding:9px 7px calc(10px + env(safe-area-inset-bottom));backdrop-filter:blur(20px)}.nav button{border:0;background:none;color:#b89ba7;display:grid;gap:4px;justify-items:center;font-size:10px;font-weight:750;padding:5px 1px}.nav button.active{color:var(--accent)}.nav span.symbol{font-size:22px}.pageTitle{font-size:28px;letter-spacing:-1px;font-weight:840;margin:0 0 3px}.weekNav{display:flex;align-items:center;justify-content:space-between;gap:9px}.weekNav button{border:none;background:#432937;border-radius:11px;padding:11px 14px;color:#fff;font-weight:800}.weekNav strong{font-size:15px}.weekNav small{display:block;color:var(--muted);font-size:12px}.line{height:1px;background:#523644;margin:12px 0}.detailsHeader{background:linear-gradient(135deg,#284d47,#311b2c);border-radius:22px;padding:22px;border:1px solid #a43f58}.detailsHeader h2{font-size:32px;letter-spacing:-1px;margin:10px 0}.step{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #35434b}.step:last-child{border:0}.step .number{border:1px solid #6b4c5c;border-radius:50%;width:34px;height:34px;display:grid;place-items:center;color:#ffd4dc}.step strong{display:block;font-size:14px}.step small{color:var(--muted);font-size:12px}.badgeLine{display:flex;gap:7px;flex-wrap:wrap}.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.formGrid .wide{grid-column:span 2}.stepper{display:flex;gap:5px}.stepper span{height:5px;flex:1;border-radius:20px;background:#674554}.stepper span.active{background:var(--accent)}.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}.choice button{min-height:90px;display:grid;gap:7px;justify-content:start;text-align:left;padding:15px;background:#32202c;border:1px solid #684759;color:#fff3f5;border-radius:15px;font-weight:750}.choice button.active{background:#284d47;border-color:var(--accent)}.checkgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.checkgrid label{display:grid;justify-items:center;background:#3b2631;border-radius:10px;padding:10px 2px;font-size:11px}.empty{padding:24px 12px;text-align:center;color:#e0c4ce}.empty strong{display:block;color:#fff;margin-bottom:8px}.metrics{display:grid;gap:10px}.bar{display:flex;align-items:center;gap:9px}.bar span{font-size:11px;color:#e8cad3;width:28px}.bar .track{height:13px;flex:1;background:#513344;border-radius:10px;overflow:hidden}.bar .track b{display:block;background:#e45570;height:100%;border-radius:10px}.bar small{color:#cbb0ba;font-size:11px;width:52px;text-align:right}.modalShade{position:fixed;inset:0;z-index:40;background:rgba(15,3,10,.76);display:flex;align-items:flex-end;justify-content:center}.modal{width:min(100%,720px);background:#281823;border-radius:24px 24px 0 0;padding:22px 18px calc(25px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto;border:1px solid #705063}.modal h2{font-size:22px}.modal .close{float:right;border:none;background:#4d2b3b;padding:8px 12px;color:white;border-radius:10px}.notice{font-size:12px;color:#f5e0e7;line-height:1.5}.boot{display:grid;place-content:center;min-height:90vh;text-align:center}.logoMark{font-size:32px;color:var(--accent)}.boot h1{margin:0}small.note{color:var(--muted)}@media(min-width:720px){.content{padding-left:26px;padding-right:26px}.nav{border:1px solid #553541;border-radius:22px 22px 0 0}.top{padding-left:30px;padding-right:30px}}
+/* TrainSync Coach — Rouge Performance theme, red/burgundy with accessible light text. */
+html,body{background:radial-gradient(circle at 100% 0%,rgba(175,39,69,.21),transparent 38%),var(--bg)}
+.top{background:linear-gradient(180deg,rgba(91,22,45,.12),transparent)}
+.hero{box-shadow:inset 0 1px 0 rgba(255,194,205,.18),0 18px 45px rgba(15,3,12,.22)}
+.hero .eyebrow,.detailsHeader .eyebrow{color:#ffbec7}
+.detailsHeader{background:linear-gradient(125deg,#85283f 0%,#481a30 62%,#291725 100%)}
+.btn{box-shadow:0 3px 10px rgba(181,30,65,.12);transition:filter .18s ease,transform .18s ease}
+.btn:active,.choice button:active,.training:active{transform:scale(.988)}
+.btn:focus-visible,.nav button:focus-visible,.weekstrip button:focus-visible,.training:focus-visible,
+.choice button:focus-visible,.textButton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #ffabb5;outline-offset:3px}
+.pill{border:1px solid rgba(255,146,171,.25)}
+.training,.card,.choice button,.weekstrip button{box-shadow:inset 0 1px 0 rgba(255,220,228,.04)}
+.weekstrip button.active,.choice button.active,.training.selected{box-shadow:inset 0 0 0 1px rgba(255,169,186,.23)}
+.bar .track b{background:linear-gradient(90deg,#b52b4b,#ff8690)}
+.progress span{background:linear-gradient(90deg,#cc2d47,#ff8e99)}
+.nav{box-shadow:0 -7px 30px rgba(18,3,12,.3)}
+.nav button.active{font-weight:840}
+@media(prefers-reduced-motion:reduce){.btn,.choice button,.training{transition:none}}
+
+/* KINTRA 1.0: premium light dashboard, deep burgundy identity and crimson accents */
+:root{color-scheme:light;--bg:#faf8f9;--surface:#ffffff;--surface2:#fff4f5;--surface3:#f7e8eb;--border:#edd8dd;--text:#32121e;--muted:#846b76;--accent:#a9163a;--accent-strong:#b5163c;--nav:rgba(255,251,252,.97)}
+html,body{background:#faf8f9;color:#32121e}
+input,select{background:#fff;color:#361421;border-color:#d9c1c9}
+input[type=date]{color-scheme:light}
+label{color:#57303f}
+a,.textButton{color:#9f163a}
+.app{max-width:760px;background:#faf8f9;min-height:100dvh}
+.top.kintra-top{height:74px;padding:13px 19px;border-bottom:1px solid rgba(122,33,55,.08);background:#fff;gap:10px}
+.kintra-header-logo{width:126px;max-width:34vw;height:46px;object-fit:contain;object-position:left center}
+.kintra-page-name{font-weight:850;font-size:16px;color:#491b2c;margin-left:auto}
+.kintra-top .circle{width:40px;height:40px;font-size:22px;color:#84203f;background:#fff6f7;border:1px solid #f0dce1}
+.content{gap:13px;padding:14px 16px 26px}
+.pageTitle{color:#330d1f}
+.card{background:#fff;border-color:#f2e7ea;box-shadow:0 2px 12px rgba(81,13,42,.045);color:#361320}
+.heading{color:#431728}
+.sub{color:#795f6b}
+.eyebrow{color:#a5163b}
+.hero,.detailsHeader{background:linear-gradient(118deg,#650824,#b51f40 74%,#e65361);border-color:#af4260;color:#fff;box-shadow:0 11px 25px rgba(114,11,44,.11)}
+.hero .sub,.detailsHeader .sub{color:#ffe2e8}
+.hero .eyebrow,.detailsHeader .eyebrow{color:#ffbecb}
+.hero .textButton{color:#fff}
+.pill{background:#fde7ec;border:1px solid #f7d1da;color:#982341}
+.hero .pill,.detailsHeader .pill{background:rgba(255,255,255,.17);color:#fff;border-color:rgba(255,255,255,.2)}
+.stat,.kintra-tile{background:#fff4f6}
+.stat strong{color:#431727}.stat small{color:#8b6876}
+.btn{background:linear-gradient(90deg,#730923,#e23552);color:#fff;box-shadow:0 5px 15px rgba(146,13,50,.14)}
+.btn.secondary{background:#fff3f5;color:#8e1639;border:1px solid #ebc8d1}
+.btn.ghost{background:#fff;border:1px solid #e7cbd2;color:#8e1639}
+.warning{background:#fff3e8;color:#80552d;border:1px solid #f4dfc7}
+.callout{background:#fff0f3;color:#62243a;border-left:3px solid #cb2c4d}
+.nav{background:rgba(255,252,252,.98);border-top:1px solid #eddbe0;box-shadow:0 -7px 25px rgba(65,8,35,.06)}
+.nav button{color:#957888}.nav button.active{color:#951333}
+.weekstrip button{background:#fff7f8;color:#795d69;border-color:#f2dfe4}
+.weekstrip button.active{background:#fde5ea;color:#841731;border-color:#cc4564}
+.dot.on{background:#c92f50}.progress{background:rgba(211,147,162,.23)}
+.training{background:#fff;color:#3c1d2c;border:1px solid #eee0e4;box-shadow:0 2px 9px rgba(105,11,41,.04)}
+.training strong{color:#40192a}.training small{color:#917783}.training .arrow{color:#b93a56}
+.training.selected{background:#fff0f4;border-color:#d06a83}
+.sectionTitle h2{color:#381222}.iconTile{background:#fff0f3;color:#a41e42}
+.weekNav button,.circle{background:#fff4f6;border:1px solid #e9ccd4;color:#923047}
+.step{border-color:#f0e4e6}.step .number{border-color:#eed0d9;color:#a22f4b}
+.choice button{background:#fff;color:#542c3c;border:1px solid #e9d8df}
+.choice button.active{background:#fff0f2;border-color:#c53859;color:#841a36}
+.checkgrid label{background:#fff5f6;color:#6d4656}
+.modal{background:#fff;border:1px solid #e9dce0;color:#361522}
+.modal .close{background:#fff2f5;color:#8e1639}
+.bar .track{background:#f3e4e7}
+.kintra-welcome{padding:20px 18px 12px;background:linear-gradient(115deg,#fff,#fff4f6);border-radius:19px;border:1px solid #f3e5e7}
+.kintra-welcome h2{font-size:28px;line-height:1.14;margin:8px 0;color:#4c0924;font-weight:880;letter-spacing:-1px}
+.kintra-welcome h2 em{font-style:normal;color:#c0284c}
+.kintra-welcome p{font-size:12px;color:#876f7a;margin:0;line-height:1.5}
+.kintra-summary-card{background:#fff;border:1px solid #efdee3;border-radius:20px;padding:18px;box-shadow:0 5px 17px rgba(115,14,45,.04)}
+.kintra-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kintra-card-head h3{margin:8px 0;color:#4d1730}
+.kintra-ring{border:7px solid #f0ccd6;border-top-color:#b51c45;border-right-color:#bd3050;border-radius:50%;width:86px;height:86px;display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:19px;font-weight:800;color:#861d3d;flex-shrink:0}
+.kintra-ring.caution{border-top-color:#e29a4d;border-right-color:#dfac75}
+.kintra-ring small{font-weight:500;font-size:9px;color:#a17d8b}
+.kintra-mini-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:15px}
+.kintra-mini-stats>div{background:#fff4f6;padding:10px 8px;border-radius:12px}
+.kintra-mini-stats span,.kintra-insight-strip small{font-size:11px;color:#90707f;display:block}
+.kintra-mini-stats strong,.kintra-insight-strip strong{display:block;margin-top:4px;color:#5c1b35;font-size:16px}
+.kintra-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kintra-tile{border-radius:17px;border:1px solid #f4e1e6;padding:16px;min-width:0}
+.kintra-card-label{font-size:11px;color:#8c5067;font-weight:800}
+.kintra-number{font-size:29px;font-weight:850;color:#5a1731;margin:8px 0 0}
+.kintra-number small{font-size:13px;font-weight:650}
+.kintra-tile .sub{font-size:11px}
+.kintra-plan-empty{background:#fff;border:1px solid #eddae0;border-radius:16px;padding:18px}
+.kintra-plan-empty strong{color:#651d38}
+.kintra-sheet{background:#fff;padding:16px;border-radius:18px;border:1px solid #eee0e4}
+.kintra-coach-tip{background:#fff0f3;border:1px solid #f0d9e0;padding:18px;border-radius:19px}
+.kintra-coach-tip h3{color:#691b39;font-size:19px;margin:10px 0 7px}
+.kintra-muted-warning{font-size:11px;color:#a54f45;line-height:1.55}
+.kintra-weather{display:flex;align-items:center;gap:10px;padding:15px 13px;background:#fff;border:1px solid #eee0e4;border-radius:18px}
+.kintra-weather strong{font-size:13px;color:#55223a}
+.kintra-icon-tile{width:41px;height:41px;display:grid;place-items:center;border-radius:13px;background:#ffe9d6;font-size:20px;flex-shrink:0}
+.kintra-weather .textButton{margin-left:auto}
+.kintra-disclaimer{font-size:10px;line-height:1.45;color:#987b88;margin:2px 4px 12px}
+.kintra-insight-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kintra-insight-strip>div{background:#fff;border:1px solid #f0e1e5;border-radius:12px;padding:11px 8px}
+.kintra-mode-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kintra-mode-picker button{padding:16px 11px;border:1px solid #eed6df;border-radius:14px;background:#fff;color:#571c36;text-align:left;display:grid;gap:7px}
+.kintra-mode-picker button span{font-size:27px;color:#b72648}
+.kintra-mode-picker button strong{font-size:13px}
+.kintra-mode-picker button small{font-size:10px;color:#957784}
+.kintra-mode-picker button.active{background:linear-gradient(125deg,#71102d,#c51c45);color:#fff;border-color:#aa3955}
+.kintra-mode-picker button.active small,.kintra-mode-picker button.active span{color:#ffced8}
+@media(max-width:370px){.kintra-data-grid{grid-template-columns:1fr 1fr}.kintra-ring{width:70px;height:70px;font-size:16px}.kintra-header-logo{width:105px}}
+
+/* KINTRA image-reference refinement: four phone panels, restrained crimson contrasts. */
+.kintra-next-workout{display:flex;gap:12px;align-items:center;width:100%;border:0;
+  background:linear-gradient(112deg,#690b27 0%,#9a1235 51%,#e52e52 100%);color:#fff;
+  border-radius:19px;text-align:left;box-shadow:0 8px 21px rgba(107,10,37,.19);padding:19px 16px;min-height:105px}
+.kintra-next-icon{width:37px;height:42px;border-radius:12px;display:grid;place-items:center;
+  background:rgba(255,255,255,.14);color:#ffd5dd;font-size:25px;flex-shrink:0}
+.kintra-next-main{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.kintra-next-main small{color:#ffd5df;font-size:10px;letter-spacing:.025em}
+.kintra-next-main strong{color:#fff;font-size:18px;line-height:1.2;letter-spacing:-.45px}
+.kintra-next-main span{color:#fff2f4;font-size:12px}
+.kintra-next-workout>b{font-size:28px;font-weight:400}
+.kintra-next-empty{border-radius:19px;border:1px solid #efcfd8;background:linear-gradient(110deg,#fff,#fff0f3);padding:19px}
+.kintra-next-empty strong{color:#651d37}
+.kintra-coach-switch{margin:7px 0 14px}
+.kintra-coach-switch button{min-height:97px}
+.kintra-toggle{width:51px;height:31px;min-width:51px;border-radius:100px;position:relative;
+  border:1px solid #d8b7c0;background:#c8b5bf;padding:3px;transition:background .2s ease}
+.kintra-toggle.on{background:#a41439;border-color:#a41439}
+.kintra-toggle span{display:block;width:23px;height:23px;background:#fff;border-radius:50%;box-shadow:0 1px 3px #0002;
+  transition:transform .2s ease}
+.kintra-toggle.on span{transform:translateX(20px)}
+.kintra-progress-tabs{background:#f5ecf0;padding:5px;display:grid;grid-template-columns:1fr 1fr 1.35fr;
+  gap:3px;border-radius:13px;border:1px solid #f2e2e7}
+.kintra-progress-tabs button{border:0;border-radius:9px;background:transparent;font-size:11px;
+  color:#846576;padding:11px 3px;font-weight:680;white-space:normal}
+.kintra-progress-tabs button.active{background:#7a0c2b;color:#fff;box-shadow:0 2px 7px #851b3633}
+.kintra-hr-row{display:grid;grid-template-columns:78px minmax(0,1fr) 62px;align-items:center;gap:7px;
+  padding:10px 0;border-top:1px solid #f0e4e6;font-size:10px;color:#7f6570}
+.kintra-hr-row strong{font-size:11px;text-align:right;color:#711530}
+.kintra-hr-track{height:8px;border-radius:6px;background:#f5e3e8;overflow:hidden}
+.kintra-hr-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#a00d32,#e14360)}
+.kintra-session-header{background:#fff;color:#531c33;border:1px solid #ecdee2;
+  box-shadow:none;padding:21px;border-radius:21px}
+.kintra-session-header h2{color:#351325}
+.kintra-session-header .sub{color:#896c79}
+.kintra-session-header .eyebrow{color:#9b2b50}
+.kintra-session-header .pill{color:#85304c;background:#fdeef2;border-color:#f4dfe5}
+.kintra-session-context{border:1px solid #f7dadd;border-radius:16px;
+  background:#fff0f3;padding:17px;color:#7d1d3d}
+.kintra-session-context strong{color:#881c3d}
+.kintra-session-context .sub{margin-top:8px}
+.kintra-next-workout:focus-visible,.kintra-progress-tabs button:focus-visible,
+.kintra-mode-picker button:focus-visible,.kintra-toggle:focus-visible{
+ outline:3px solid #9d1e49;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.kintra-toggle,.kintra-toggle span{transition:none}}
+
+.kintra-strength-review .heading{margin:8px 0}
+.kintra-strength-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.kintra-strength-grid>div{background:#fdf2f5;border:1px solid #f4e1e7;border-radius:12px;padding:13px}
+.kintra-strength-grid strong{display:block;color:#7b1537;font-size:23px}
+.kintra-strength-grid small{font-size:11px;color:#997586}
+
+/* KINTRA dashboard audit v10: accessible five-tile layout, flexible weather and real readiness */
+.kintra-readiness .kintra-card-head{align-items:center}
+.kintra-readiness-symbol{width:66px;height:66px;border:6px solid #f1dce3;border-right-color:#b51f42;border-top-color:#b51f42;display:grid;place-items:center;border-radius:50%;font-size:27px;font-weight:900;color:#801532;flex-shrink:0}
+.kintra-readiness-symbol.favorable{border-top-color:#4f9675;border-right-color:#4f9675;color:#367358}
+.kintra-readiness-symbol.caution{border-top-color:#ce8d48;border-right-color:#ce8d48;color:#9a6527}
+.kintra-readiness-symbol.insufficient{border-color:#e7dce0;color:#927783}
+.kintra-recovery-signals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:14px}
+.kintra-recovery-indicator{display:flex;flex-direction:column;gap:4px;border-radius:10px;background:#fff5f7;padding:9px 7px;font-size:10px;color:#866274}
+.kintra-recovery-indicator strong{font-size:13px;color:#64213c}
+.kintra-source-hint{display:block;margin-top:10px;font-size:10px;line-height:1.4;color:#987783}
+.kintra-sleep-card{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid #f0e2e6;border-radius:19px;padding:15px;box-shadow:0 4px 13px #671a3507}
+.kintra-sleep-moon{background:#edf0fc;color:#445eae;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;font-size:28px;flex-shrink:0}
+.kintra-sleep-detail{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}
+.kintra-sleep-detail strong{font-size:24px;letter-spacing:-.6px;color:#3c2236}
+.kintra-sleep-detail .sub{font-size:11px;margin:0}
+.kintra-mini-button{border:none;background:#fff3f6;color:#a31c43;font-size:22px;border-radius:50%;width:32px;height:32px;display:grid;place-items:center}
+.kintra-weather-detail{padding:16px;border:1px solid #f0e1e6;border-radius:20px;background:#fff;box-shadow:0 3px 12px #50122a08}
+.kintra-weather-detail h3{margin:8px 0 0}
+.kintra-weather-now{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:13px 0}
+.kintra-weather-now strong{font-size:25px;color:#7e1738}
+.kintra-weather-now span{font-size:11px;color:#8c6a79;flex:1;min-width:140px}
+.kintra-weather-best{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:#fff1f4;border:1px solid #f2d7e0;padding:11px;border-radius:12px;align-items:center}
+.kintra-weather-best>span{font-size:11px;color:#78354b}
+.kintra-weather-best>strong{font-size:17px;color:#8c143a}
+.kintra-weather-best>small{grid-column:1/-1;color:#9a5a70;font-size:10px}
+.kintra-hours{display:flex;overflow-x:auto;gap:8px;padding:13px 0 6px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.kintra-hour-forecast{display:flex;min-width:88px;flex-direction:column;gap:4px;padding:10px 8px;border-radius:13px;border:1px solid #f0e1e6;color:#654554;background:#fffafa;scroll-snap-align:start}
+.kintra-hour-forecast strong{font-size:12px;color:#67243b}
+.kintra-hour-forecast span{font-size:17px;color:#8f1940;font-weight:800}
+.kintra-hour-forecast small{font-size:9px;color:#9a7886}
+.kintra-hour-forecast.best{background:#fff0f3;border-color:#bf4b67}
+.kintra-place-results{margin:14px 0;display:grid;gap:8px;max-height:300px;overflow:auto}
+.kintra-place-results .training{min-height:50px;padding:10px;align-items:center}
+.kintra-place-results strong{white-space:normal;overflow-wrap:anywhere}
+.kintra-trend-card .stat{padding:11px 7px}
+.kintra-coach-review .sub{line-height:1.5}
+.kintra-insight-tip{background:#fff1f4;padding:12px;border-radius:12px;border-left:3px solid #bd2a4c;font-size:12px;line-height:1.5;margin:10px 0;color:#6e2641}
+@media (max-width:350px){.kintra-recovery-signals{grid-template-columns:repeat(2,minmax(0,1fr))}.kintra-data-grid{gap:6px}.kintra-tile{padding:12px 8px}}
+
+/* FIX iPhone: a modal result (including a long city name) must never expand the viewport.
+   Keep a genuine responsive phone viewport; do not disable browser pinch zoom. */
+html,body,#app{max-inline-size:100%;min-inline-size:0}
+.app{inline-size:100%;min-inline-size:0}
+.modalShade{
+ inline-size:100%;max-inline-size:100vw;min-inline-size:0;
+ overflow-x:clip;box-sizing:border-box;
+ padding-inline:env(safe-area-inset-left) env(safe-area-inset-right);
+ overscroll-behavior:contain;
+}
+.modal{
+ inline-size:100%;width:100%;max-inline-size:min(100%,440px);min-inline-size:0;
+ flex:0 1 440px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;
+ max-block-size:min(90dvh,calc(100dvh - env(safe-area-inset-top) - 8px));
+ overflow-wrap:anywhere;-webkit-overflow-scrolling:touch;
+}
+.modal>*{max-inline-size:100%;min-inline-size:0}
+.modal label,.modal .actions,.modal .kintra-place-results,.modal .training,.modal .callout{min-inline-size:0;max-inline-size:100%}
+.modal input:not([type=checkbox]),.modal select,.modal textarea{font-size:16px;inline-size:100%;max-inline-size:100%;min-inline-size:0}
+.kintra-place-results{min-inline-size:0;inline-size:100%;max-inline-size:100%;overflow-x:hidden}
+.kintra-place-results .training{display:flex;inline-size:100%;min-inline-size:0;max-inline-size:100%;overflow:hidden;gap:8px}
+.kintra-place-results .training strong{flex:1 1 0;min-inline-size:0;overflow-wrap:anywhere;word-break:normal;white-space:normal}
+.kintra-place-results .training .arrow{flex:0 0 auto}
+@media(max-width:480px){
+ .modalShade{align-items:flex-end;justify-content:center}
+ .modal{max-inline-size:100%;border-radius:22px 22px 0 0;padding:20px 16px calc(22px + env(safe-area-inset-bottom))}
+}
+
+/* KINTRA visual review v12 — compact iPhone layout inspired by approved 4-screen board. */
+.kintra-welcome{padding:12px 14px;background:#fff;border:0;border-radius:12px}
+.kintra-welcome h2{font-size:31px;color:#301422;letter-spacing:-1.25px}
+.kintra-summary-card,.kintra-sleep-card,.kintra-tile,.kintra-weather-detail,.kintra-coach-parameters,.kintra-completed-card{box-shadow:0 4px 20px rgba(90,16,46,.055)}
+.kintra-week-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:end;gap:3px;height:57px;margin:13px 0 3px}
+.kintra-week-bar{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}
+.kintra-week-column{height:43px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.kintra-week-column i{display:block;width:min(12px,72%);border-radius:4px 4px 1px 1px;background:linear-gradient(0deg,#ae113e,#f28b9f)}
+.kintra-week-bar small{font-size:9px;color:#846a77}
+.kintra-week-caption{font-size:10px;color:#8d5d72;line-height:1.3}
+.kintra-muscle-breakdown{font-size:10px;line-height:1.35;color:#872e49;margin-top:10px;overflow-wrap:anywhere}
+.kintra-coach-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.kintra-coach-parameter-grid>div{min-width:0;background:#fff6f8;border:1px solid #f0dce4;padding:11px;border-radius:12px}
+.kintra-coach-parameter-grid small{display:block;font-size:10px;color:#967784;margin-bottom:5px}
+.kintra-coach-parameter-grid strong{font-size:13px;color:#5c1731;overflow-wrap:anywhere}
+.kintra-session-metadata{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:11px 0 13px}
+.kintra-session-metadata span{background:#fff0f4;border:1px solid #f5dfe5;border-radius:99px;padding:7px 9px;font-size:11px;color:#7f2945}
+.kintra-completed-status{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#38735a;font-weight:800;font-size:12px;background:#eff9f3;border-radius:10px;padding:10px}
+.kintra-completed-status small{font-weight:500;color:#658274}
+.kintra-completed-title{display:flex;gap:10px;align-items:center;width:100%;padding:15px 0 12px;border:0;background:transparent;color:#48162b;text-align:left}
+.kintra-completed-title strong{flex:1;min-width:0;font-size:17px;overflow-wrap:anywhere}
+.kintra-completed-title>span:last-child{font-size:22px;color:#ad2e50}
+.kintra-run-symbol{border-radius:13px;background:#fff0f4;width:40px;height:40px;display:grid;place-items:center;color:#b82145;font-size:25px;flex-shrink:0}
+.kintra-completed-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:4px 0 12px}
+.kintra-completed-stats>div{border-radius:11px;background:#fff5f7;padding:11px 7px;min-width:0}
+.kintra-completed-stats strong{font-size:14px;color:#411b2c;display:block;overflow-wrap:anywhere}
+.kintra-completed-stats small{font-size:10px;color:#927483;display:block;margin-top:5px}
+.kintra-laps-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain}
+.kintra-laps-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px;color:#512e3e}
+.kintra-laps-table th{background:#fff0f4;text-align:left;color:#97546a;font-weight:800;font-size:10px;padding:10px 5px}
+.kintra-laps-table th:first-child{width:24%}
+.kintra-laps-table th:nth-child(2){width:23%}
+.kintra-laps-table th:nth-child(3){width:30%}
+.kintra-laps-table th:nth-child(4){width:23%}
+.kintra-laps-table td{vertical-align:top;border-bottom:1px solid #f3e5e9;padding:11px 5px;overflow-wrap:anywhere}
+.kintra-laps-table td small{display:block;font-size:9px;color:#8e7880;margin-top:4px;line-height:1.3}
+.kintra-split-bar{height:5px;border-radius:10px;background:#f3dee4;display:block;overflow:hidden;margin-top:6px}
+.kintra-split-bar i{height:100%;display:block;background:linear-gradient(90deg,#920c30,#e34665);border-radius:10px}
+@media(max-width:370px){.kintra-coach-parameter-grid{gap:6px}.kintra-completed-stats{gap:4px}.kintra-completed-stats strong{font-size:12px}.kintra-laps-table{font-size:10px}}
+
+/* v13: Fix actual page widening from implicit CSS grid min-content sizes.
+   Every standalone tile has a zero minimum inline size, while forecast scrolls inside itself. */
+html,body,#app{width:100%;max-width:100%;overflow-x:clip}
+.app{width:100%;max-width:min(760px,100%);min-width:0;overflow-x:clip}
+.content{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;width:100%;max-width:100%;overflow-x:clip}
+.content>*{min-width:0;max-width:100%;box-sizing:border-box}
+.kintra-weather-detail,.kintra-hours,.kintra-hour-forecast,.kintra-data-grid,.kintra-tile,.kintra-sheet{
+ box-sizing:border-box;min-width:0;max-width:100%
+}
+.kintra-weather-detail{width:100%;overflow:hidden;contain:inline-size}
+.kintra-weather-detail>.between{min-width:0;flex-wrap:wrap}
+.kintra-weather-detail>.between>div{min-width:0;flex:1 1 150px;overflow-wrap:anywhere}
+.kintra-hours{display:flex;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;
+ scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+ scroll-snap-type:x proximity;touch-action:pan-x pan-y}
+.kintra-hour-forecast{flex:0 0 89px;min-width:89px;max-width:89px}
+.kintra-weather-now{min-width:0}
+.kintra-weather-now span{min-width:0;overflow-wrap:anywhere}
+.kintra-weather-best{min-width:0;grid-template-columns:minmax(0,1fr) auto}
+.kintra-weather-best>span{min-width:0;overflow-wrap:anywhere}
+.kintra-data-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kintra-tile{overflow:hidden;overflow-wrap:anywhere}
+.kintra-map-card,.kintra-hevy-list,.kintra-hevy-detail,.kintra-complete-metrics{
+ border:1px solid #f0e0e5;background:#fff;border-radius:18px;padding:16px;min-width:0;max-width:100%;overflow:hidden
+}
+.kintra-map-card h3{margin:6px 0 11px}
+.kintra-map-scene{position:relative;width:100%;max-width:100%;aspect-ratio:360/236;
+ overflow:hidden;border-radius:14px;background-color:#f7eaf0;
+ background-image:linear-gradient(#cfaab522 1px,transparent 1px),linear-gradient(90deg,#cfaab522 1px,transparent 1px);
+ background-size:35px 35px;isolation:isolate}
+.kintra-map-tiles{position:absolute;inset:0;overflow:hidden;z-index:0}
+.kintra-map-tiles img{position:absolute;object-fit:fill;max-width:none}
+.kintra-map-scene svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.kintra-gps-shadow{stroke:#fff;stroke-width:6;fill:none;stroke-linejoin:round;stroke-linecap:round;opacity:.93}
+.kintra-gps-route{stroke:#b31d43;stroke-width:3;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.kintra-map-attribution{position:absolute;bottom:3px;right:4px;background:#ffffffe6;z-index:2;
+ padding:3px 5px;font-size:9px;color:#303035;border-radius:4px}
+.kintra-map-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.kintra-map-actions .sub{flex:1 1 160px;font-size:11px}
+.kintra-map-actions button{flex:0 1 auto;font-size:11px}
+.kintra-map-empty strong{color:#59243d}
+.kintra-map-note{font-size:11px}
+.kintra-more-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kintra-more-metrics>div{border:1px solid #f2e1e6;border-radius:11px;padding:10px;background:#fff9fa;min-width:0}
+.kintra-more-metrics small{display:block;color:#8c6677;font-size:10px}
+.kintra-more-metrics strong{display:block;margin-top:4px;color:#5f1933;font-size:14px}
+.kintra-hevy-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.kintra-hevy-stats>div{background:#fff3f6;padding:12px 7px;border-radius:11px;min-width:0}
+.kintra-hevy-stats strong{display:block;color:#6c1231;font-size:19px}
+.kintra-hevy-stats small{font-size:10px;color:#906676}
+.kintra-hevy-session{margin:9px 0;max-width:100%}
+.kintra-hevy-session-body{flex:1;min-width:0;overflow-wrap:anywhere}
+.kintra-hevy-detail h2{color:#3c1429;font-size:23px}
+.kintra-hevy-exercise{border-top:1px solid #f1e2e8;margin-top:15px;padding-top:15px;min-width:0}
+.kintra-hevy-exercise h4{font-size:14px;min-width:0;color:#6d2240;overflow-wrap:anywhere}
+.kintra-hevy-sets{min-width:0}
+.kintra-hevy-sets-head,.kintra-hevy-set-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;
+ padding:9px 3px;border-bottom:1px solid #f4e7eb;font-size:11px;color:#745665}
+.kintra-hevy-sets-head{background:#fff3f6;font-weight:750;color:#9b425c}
+.kintra-hevy-set-row strong{color:#672139;font-weight:760;overflow-wrap:anywhere}
+@media(max-width:360px){.kintra-map-card,.kintra-hevy-list,.kintra-hevy-detail{padding:12px}
+ .kintra-hevy-sets-head,.kintra-hevy-set-row{font-size:10px}
+ .kintra-map-actions button{width:100%}}
+
+
+/* KINTRA Coach 2.0 — small-screen review and explicit confirmation sheet. */
+.kintra-coach-v2{min-width:0;max-width:100%;overflow:hidden}
+.kintra-coach-v2 .heading{margin-top:6px}
+.kintra-coach-v2-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.kintra-coach-v2-grid>div{background:#fdf4f6;border:1px solid #f2e1e6;padding:12px 10px;border-radius:13px;min-width:0}
+.kintra-coach-v2-grid small{display:block;font-size:11px;line-height:1.35;color:#7d6370;overflow-wrap:anywhere}
+.kintra-coach-v2-grid strong{display:block;color:#81193c;font-size:19px;line-height:1.3;margin-top:5px;font-variant-numeric:tabular-nums}
+.kintra-coach-v2-matching{font-size:12px;line-height:1.5;color:#65394c;overflow-wrap:anywhere}
+.kintra-coach-v2-signals,.kintra-coach-v2-proposals{padding-top:14px;margin-top:14px;border-top:1px solid #f0e2e8;min-width:0}
+.kintra-coach-v2-signals>strong,.kintra-coach-v2-proposals>strong{display:block;font-size:14px;margin-bottom:8px;color:#512039}
+.kintra-coach-v2-signal{font-size:12px;line-height:1.55;color:#765361;overflow-wrap:anywhere;margin:8px 0}
+.kintra-coach-v2-proposals .btn{white-space:normal;overflow-wrap:anywhere;text-align:center;max-width:100%;min-width:0}
+.kintra-coach-v2-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:15px 0}
+.kintra-coach-v2-comparison>div{padding:12px 10px;background:#f9eef1;border:1px solid #e8cdd7;border-radius:12px;min-width:0}
+.kintra-coach-v2-comparison small,.kintra-coach-v2-comparison strong,.kintra-coach-v2-comparison span{display:block;overflow-wrap:anywhere}
+.kintra-coach-v2-comparison small{color:#95485f;font-size:10px;letter-spacing:.04em}
+.kintra-coach-v2-comparison strong{margin:7px 0;color:#68223c;font-size:15px}
+.kintra-coach-v2-comparison span{font-size:12px;color:#79576a}
+@media(max-width:360px){.kintra-coach-v2-grid strong{font-size:17px}.kintra-coach-v2-comparison{grid-template-columns:minmax(0,1fr)}}

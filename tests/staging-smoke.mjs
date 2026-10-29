@@ -1,0 +1,151 @@
+import assert from "node:assert/strict";
+const base=process.env.TRAINSYNC_STAGE_URL || "https://trainsync-staging-demo-staging.up.railway.app";
+async function check(path,options={},expected=200) {
+  let error;
+  for(let i=0;i<6;i++){
+    try {
+      const response=await fetch(base+path,{...options,signal:AbortSignal.timeout(15000),redirect:"follow",cache:"no-store"});
+      assert.equal(response.status,expected,`${path}: HTTP ${response.status}`);
+      return response;
+    }catch(err){
+      error=err;
+      if(i<5)await new Promise(resolve=>setTimeout(resolve,2000));
+    }
+  }
+  throw error;
+}
+const health=await (await check("/health")).json();
+assert.equal(health.mode,"active-capable");
+assert.equal(health.keyStoredOnServer,false);
+console.log("OK: stage health");
+const html=await (await check("/?demo=1")).text();
+assert.match(html,/\.\/app\.mjs\?v=(13|14|15|16|17|18)/);
+const stageVersion=Number(html.match(/app\.mjs\?v=(\d+)/)?.[1]||0);
+const appResponse=await check("/runna-next/app.mjs?v="+stageVersion);
+assert.match(appResponse.headers.get("content-type")||"",/javascript/i,"ES module must have correct MIME");
+const engineResponse=await check("/plan-engine.mjs");
+assert.match(engineResponse.headers.get("content-type")||"",/javascript/i,"Planner module must be served as JavaScript");
+const app=await appResponse.text();
+const css=await (await check("/runna-next/app.css?v="+stageVersion)).text();
+assert.match(app,/renderWizard/);
+assert.match(app,/todayView/);
+assert.match(app,/planView/);
+assert.match(app,/detailView/);
+assert.match(app,/renderTrainingReview/);
+assert.match(app,/renderKintraDashboard/);
+assert.match(app,/renderRaceSummary/);
+assert.match(app,/renderHevyWorkoutDetail/);
+assert.match(app,/activityDetail/);
+assert.match(app,/kintra-coach-parameters/);
+assert.match(app,/weatherSearch/);
+assert.match(app,/weatherChoose/);
+assert.match(app,/renderKintraStrengthSummary/);
+assert.match(app,/hevyConnect/);
+const icon=await (await check("/runna-next/kintra-icon.svg")).text();
+assert.match(icon,/<svg/);
+const logo=await (await check("/runna-next/kintra-logo.svg")).text();
+assert.match(logo,/KINTRA/);
+const manifest=await (await check("/runna-next/manifest.webmanifest?v=2")).json();
+assert.equal(manifest.short_name,"KINTRA");
+assert.equal(manifest.icons[0].src,"./kintra-icon-192.png");
+assert.match((await check("/runna-next/kintra-icon-192.png")).headers.get("content-type")||"",/png/);
+const invalidWeather=await (await check("/v3/weather?lat=91&lon=0",{},400)).json();
+assert.match(invalidWeather.error,/Coordonnées invalides/);
+const noGPS=await (await check("/v3/activities/abc/detail",{},401)).json();
+assert.match(noGPS.error,/Intervals/i);
+const noHevy=await (await check("/v3/hevy/workouts",{},401)).json();
+assert.match(noHevy.error,/Hevy Pro/);
+const afterRun=await (await check("/runna-next/after-run.mjs")).text();
+assert.match(afterRun,/renderActivityReport/);
+const reconcile=await (await check("/runna-next/workout-reconciliation.mjs")).text();
+assert.match(reconcile,/pairedEventId/);
+assert.match(css,/\.nav/);
+assert.match(css,/kintra-next-workout/);
+assert.match(css,/kintra-progress-tabs/);
+assert.match(css,/kintra-sleep-card/);
+assert.match(css,/kintra-hour-forecast/);
+assert.match(css,/kintra-completed-stats/);
+assert.match(css,/kintra-laps-table/);
+assert.match(css,/modalShade/);
+assert.match(css,/max-inline-size:min\(100%,440px\)/);
+const weatherModule=await (await check("/runna-next/kintra-weather.mjs")).text();
+assert.match(weatherModule,/forecastSlots/);
+const map=await (await check("/runna-next/kintra-map.mjs")).text();
+assert.match(map,/OpenStreetMap contributors/);
+if(stageVersion>=14){
+ const coachV2=await (await check("/runna-next/kintra-coach-v2.mjs")).text();
+ assert.match(coachV2,/buildCoachReview/);
+ assert.match(app,/renderCoachReview/);
+}
+if(stageVersion>=18){
+ const design18=await (await check("/runna-next/kintra-design-v18.css?v=18")).text();
+ const device=await (await check("/runna-next/device-session.mjs")).text();
+ assert.match(design18,/KINTRA v18/);
+ assert.match(device,/non-extractable AES-GCM/);
+ assert.match(app,/restoreDeviceSession/);
+}
+if(stageVersion>=17){
+ const design=await (await check("/runna-next/kintra-design-v17.css?v=17")).text();
+ assert.match(design,/KINTRA 17/);
+ assert.match(app,/kintra-ui-17/);
+ assert.match(html,/kintra-design-v17\.css\?v=17/);
+}
+if(stageVersion>=16){
+ const secure=await (await check("/runna-next/secure-backup.mjs")).text();
+ assert.match(secure,/AES-GCM/);
+ assert.match(app,/backupSecureDownload/);
+}
+if(stageVersion>=15){
+ const backup=await (await check("/runna-next/local-backup.mjs")).text();
+ const gpx=await (await check("/runna-next/gpx-export.mjs")).text();
+ assert.match(backup,/parsePortableBackup/);
+ assert.match(gpx,/routeToGpx/);
+ assert.match(app,/backupApply/);
+ assert.match(app,/coachLinkAccept/);
+ assert.match(map,/exportGpx/);
+}
+const strength=await (await check("/runna-next/kintra-hevy.mjs")).text();
+assert.match(strength,/renderHevyWorkoutDetail/);
+const presenter=await (await check("/runna-next/kintra-presenter.mjs")).text();
+assert.match(presenter,/renderRaceSummary/);
+const insightsModule=await (await check("/runna-next/kintra-insights.mjs")).text();
+assert.match(insightsModule,/analyzeRun/);
+const invalidPlace=await (await check("/v3/places?name=A",{},400)).json();
+assert.match(invalidPlace.error,/deux caractères/);
+assert.match(app,/progressTab/);
+assert.match(app,/toggleAdvice/);
+assert.match(css,/--accent:#a9163a/);
+assert.match(css,/--accent-strong:#b5163c/);
+assert.match(html,/#faf8f9/);
+assert.match(html,/KINTRA/);
+const active=await (await check("/")).text();
+assert.match(active,/app\.mjs\?v=(13|14|15|16|17|18)/);
+const vault=await (await check("/runna-next/credentials.mjs")).text();
+assert.match(vault,/AES-GCM/);
+console.log("OK: main URL serves live-ready app with encrypted client vault");
+console.log("OK: KINTRA premium crimson branding, logo, theme and PWA assets");
+console.log("OK: Runna-inspired landing page, onboarding, plan, session detail and mobile navigation");
+const previous=await (await check("/index.html?demo=1")).text();
+assert.match(previous,/trainsync-v3\.js/);
+console.log("OK: previous TrainSync preview preserved at /index.html");
+const unauth=await (await check("/v3/status",{},401)).json();
+assert.match(unauth.error,/clé Intervals/i);
+console.log("OK: live API denies unauthed requests");
+const status=await (await check("/v3/status?demo=1")).json();
+assert.equal(status.demo,true);
+console.log("OK: stage backend marked demo");
+const dash=await (await check("/v3/dashboard?demo=1")).json();
+assert.equal(dash.demo,true);
+assert.ok(dash.activities.length>0);
+console.log("OK: all fitness data explicitly synthetic");
+const tomorrow=new Date();tomorrow.setUTCDate(tomorrow.getUTCDate()+1);
+const w={kind:"interval",date:tomorrow.toISOString().slice(0,10),repeats:6,intervalMeters:800};
+const options={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(w)};
+const preview=await (await check("/v3/workouts/preview?demo=1",options)).json();
+assert.equal(preview.demo,true);
+assert.ok(preview.preview.description.includes("6x\n- 800mtr Z4 Pace"));
+console.log("OK: 6x800 preview");
+const publish=await (await check("/v3/workouts/publish?demo=1",options)).json();
+assert.equal(publish.simulated,true);
+assert.equal(publish.watchStatus,"non vérifié");
+console.log("OK: publication fictive, aucune activité Intervals écrite");

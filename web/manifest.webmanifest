@@ -1,7 +1,7 @@
 {
-  "name": "TrainSync — Hevy + Garmin",
+  "name": "TrainSync — Performance Coach",
   "short_name": "TrainSync",
-  "description": "Séances Hevy et Garmin, analyses et recommandations dans une seule app web.",
+  "description": "Coach running adaptatif : Intervals.icu, Apple Watch Ultra et séances de musculation Hevy.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
@@ -10,7 +10,17 @@
   "background_color": "#0b0e0d",
   "theme_color": "#0b0e0d",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

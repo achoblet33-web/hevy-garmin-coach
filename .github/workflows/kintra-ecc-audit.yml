@@ -1,0 +1,27 @@
+name: KINTRA ECC AgentShield security review
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feat/trainsync-3-intervals-hub"]
+    paths:
+      - ".github/workflows/kintra-ecc-audit.yml"
+      - "preview/**"
+      - "web/runna-next/**"
+      - "Backend/**"
+      - "docs/AUDIT_KINTRA_V10.md"
+permissions:
+  contents: read
+jobs:
+  ecc-agentshield:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: ECC AgentShield security scan (read-only, no auto-fix)
+        uses: affaan-m/agentshield@b0891303bdcd6037376a94263d45cfd2ff3dfb98
+        with:
+          path: '.'
+          min-severity: medium
+          fail-on-findings: true

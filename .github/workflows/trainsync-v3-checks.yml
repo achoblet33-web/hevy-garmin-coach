@@ -1,0 +1,119 @@
+name: TrainSync v3 checks
+on:
+  pull_request:
+    paths:
+      - "Backend/**"
+      - "web/**"
+      - "preview/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/trainsync-v3-checks.yml"
+  push:
+    branches: ["feat/trainsync-3-intervals-hub"]
+    paths:
+      - "Backend/**"
+      - "web/**"
+      - "preview/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/trainsync-v3-checks.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax checks
+        run: |
+          node --check web/trainsync-v3.js
+          node --check web/plan-engine.mjs
+          node --check web/runna-style-plan.mjs
+          node --check web/runna-next/app.mjs
+          node --check web/runna-next/after-run.mjs
+          node --check web/runna-next/kintra-coach.mjs
+          node --check web/runna-next/kintra-coach-v2.mjs
+          node --check web/runna-next/local-backup.mjs
+          node --check web/runna-next/secure-backup.mjs
+          node --check web/runna-next/gpx-export.mjs
+          node --check web/runna-next/kintra-hub.mjs
+          node --check web/runna-next/kintra-weather.mjs
+          node --check web/runna-next/kintra-insights.mjs
+          node --check web/runna-next/kintra-presenter.mjs
+          node --check web/runna-next/kintra-map.mjs
+          node --check web/runna-next/kintra-hevy.mjs
+          node --check preview/kintra-activity.mjs
+          node --check preview/weather-relay.mjs
+          node --check web/runna-next/workout-reconciliation.mjs
+          node --check Backend/worker-v30.js
+          node --check Backend/running-workouts.mjs
+          node --check preview/worker.js
+          node --check preview/live-worker.mjs
+          node --check preview/hevy-relay.mjs
+          node --check web/runna-next/credentials.mjs
+          node --check web/runna-next/device-session.mjs
+          node --check preview/server.mjs
+      - name: Unit and API tests (no network keys)
+        run: npm test
+      - name: Wrangler package build validation only (NO DEPLOY)
+        run: |
+          npx --yes wrangler@latest deploy --dry-run --config Backend/wrangler.jsonc
+          npx --yes wrangler@latest deploy --dry-run --config preview/wrangler.jsonc
+  smoke-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify isolated Railway staging (fake data only)
+        run: node tests/staging-smoke.mjs
+  production-config-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check public production /health without modifying it
+        run: node tests/production-health-readonly.mjs
+
+  browser-v4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser test runtime (test job only)
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - name: Exercise the actual mobile coach via staging HTTPS
+        run: node tests/coach-browser.mjs
+      - name: Verify Coach 2.0 locally with mock data at iPhone widths (NO KEYS)
+        run: node tests/coach-v2-browser.mjs
+      - name: Verify KINTRA 3.0 reliability, backups and manual matching on iPhone without keys
+        run: node tests/kintra-v3-browser.mjs
+      - name: Audit iPhone viewport in WebKit Safari-like engine (mock data only)
+        run: node tests/kintra-mobile-webkit.mjs
+      - name: Review all four KINTRA visual tabs at iPhone widths without API keys
+        run: node tests/kintra-reference-ui-browser.mjs
+      - name: Verify persistent Intervals iPhone login, encrypted cache and offline return without keys
+        run: node tests/kintra-persistent-session-browser.mjs
+      - name: Verify encrypted trusted-device reconnect with WebKit Safari-like engine
+        run: node tests/kintra-device-webkit-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trainsync-coach-mobile-preview
+          path: test-artifacts/*.png
+          if-no-files-found: ignore

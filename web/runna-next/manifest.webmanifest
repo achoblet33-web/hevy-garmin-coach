@@ -1,0 +1,25 @@
+{
+  "name": "KINTRA — Centre sportif et coach",
+  "short_name": "KINTRA",
+  "description": "Ton centre de performance : running, entraînements, récupération et programme adaptatif.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf8f9",
+  "theme_color": "#faf8f9",
+  "icons": [
+    {
+      "src": "./kintra-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./kintra-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

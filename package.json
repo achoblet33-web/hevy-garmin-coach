@@ -1,0 +1,13 @@
+{
+  "name": "trainsync-v3-staging",
+  "private": true,
+  "version": "3.0.0-preview.2",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node preview/server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

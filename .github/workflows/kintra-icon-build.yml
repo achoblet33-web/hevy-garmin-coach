@@ -1,0 +1,40 @@
+name: Generate KINTRA iPhone icons
+on:
+  push:
+    branches: ["feat/trainsync-3-intervals-hub"]
+    paths:
+      - ".github/workflows/kintra-icon-build.yml"
+      - "web/runna-next/kintra-icon.svg"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-icons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/trainsync-3-intervals-hub
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Render vector icon to crisp iPhone sizes
+        run: |
+          python -m pip install --quiet cairosvg
+          python - <<'PY'
+          import cairosvg
+          from pathlib import Path
+          src = Path("web/runna-next/kintra-icon.svg").read_bytes()
+          for size in (192,512):
+              cairosvg.svg2png(bytestring=src,write_to=f"web/runna-next/kintra-icon-{size}.png",output_width=size,output_height=size)
+          PY
+      - name: Commit generated icons to feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/runna-next/kintra-icon-192.png web/runna-next/kintra-icon-512.png
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(kintra): generate iOS and PWA icons from original KINTRA SVG"
+            git push origin HEAD:feat/trainsync-3-intervals-hub
+          fi
