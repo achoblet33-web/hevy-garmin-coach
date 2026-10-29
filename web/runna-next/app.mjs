@@ -284,11 +284,15 @@ function normalPage(){
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
  if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
  }
- return `<div class="app kintra-ui-17"><header class="top kintra-top">
- <img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">
- <div class="kintra-page-name">${state.selected?"Séance":state.tab==="today"?"Aujourd'hui":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Mon profil"}</div>
+ const innerScreen=state.selected||state.activityFocus||state.hevyFocus!==null||state.tab!=="today";
+ const backAction=state.selected?"back":state.activityFocus?"backActivity":state.hevyFocus!==null?"backHevy":"tab:today";
+ const screenTitle=state.selected?"Séance":state.activityFocus?"Analyse":state.hevyFocus!==null?"Musculation":state.tab==="plan"?"Coach":state.tab==="activities"?"Progression":"Plus";
+ return `<div class="app kintra-ui-17 kintra-ui-18"><header class="top kintra-top ${innerScreen?"kintra-top-secondary":""}">
+ ${innerScreen?`<button class="kintra-back-control" data-action="${backAction}" aria-label="Retour">‹</button>`:
+  `<img src="./kintra-logo.svg" alt="KINTRA" class="kintra-header-logo">`}
+ <div class="kintra-page-name">${innerScreen?screenTitle:""}</div>
  <button class="circle" data-action="tab:profile" aria-label="Mon profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></button></header>
- <main class="content">${state.sessionRestoring?`<div class="kintra-sync-notice" role="status">↻ Reconnexion sécurisée et synchronisation en cours…</div>`:""}${state.localSnapshot?`<div class="kintra-sync-notice" role="status">Dernière copie chiffrée locale · ${e(String(state.syncedAt||"").slice(0,16).replace("T"," "))}. Données à actualiser.</div>`:""}${DEMO?`<div class="warning">Mode démonstration · données fictives · aucune séance envoyée sur ta montre. <button class="textButton" data-action="goLive">Ouvrir la version active</button></div>`:!state.connected?`<div class="callout">Mode actif · Connecte ton compte Intervals.icu pour synchroniser les courses et envoyer des séances à l’Apple Watch. <button class="textButton" data-action="connect">Connecter maintenant ›</button></div>`:""}${content}</main></div>
+ <main class="content">${state.sessionRestoring?`<div class="kintra-sync-notice" role="status">↻ Reconnexion sécurisée et synchronisation en cours…</div>`:""}${state.localSnapshot?`<div class="kintra-sync-notice" role="status">Dernière copie chiffrée locale · ${e(String(state.syncedAt||"").slice(0,16).replace("T"," "))}. Données à actualiser.</div>`:""}${DEMO?`<div class="kintra-demo-banner"><span>● Démonstration · données fictives</span><button class="textButton" data-action="goLive">Version active ›</button></div>`:!state.connected?`<div class="kintra-demo-banner"><span>Intervals.icu non connecté</span><button class="textButton" data-action="connect">Connecter ›</button></div>`:""}${content}</main></div>
  <nav class="nav" aria-label="Navigation principale">${[
   ["today","Aujourd'hui",'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>'],
   ["plan","Coach",'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'],
