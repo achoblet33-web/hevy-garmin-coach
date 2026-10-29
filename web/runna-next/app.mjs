@@ -282,7 +282,7 @@ function normalPage(){
    content=renderHevyWorkoutDetail(workout);
  }
  if(!state.activityFocus&&state.selected){const x=state.plan?.sessions.find(y=>y.id===state.selected);
- if(x)content=`<button class="textButton" data-action="back">‹ Retour</button>${detailView(x)}`;
+ if(x)content=detailView(x);
  }
  const innerScreen=state.selected||state.activityFocus||state.hevyFocus!==null||state.tab!=="today";
  const backAction=state.selected?"back":state.activityFocus?"backActivity":state.hevyFocus!==null?"backHevy":"tab:today";
