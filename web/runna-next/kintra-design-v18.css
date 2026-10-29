@@ -67,6 +67,7 @@ html,body{background:#fdfcfc!important}
 }
 .app.kintra-ui-18 .kintra-readiness-symbol.insufficient{border-color:#efe8eb}
 .app.kintra-ui-18 .kintra-card-head{align-items:center;gap:14px}
+.app.kintra-ui-18 .kintra-card-head .eyebrow{display:block;font-size:9px;letter-spacing:.03em;color:#7c5c69;margin-bottom:3px}
 .app.kintra-ui-18 .kintra-card-head h3{font-size:16px;letter-spacing:-.4px}
 .app.kintra-ui-18 .kintra-readiness>.sub{margin:5px 0;font-size:10px}
 .app.kintra-ui-18 .kintra-recovery-signals{gap:4px;margin:8px 0 0}
