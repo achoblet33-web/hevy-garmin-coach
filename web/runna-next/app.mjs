@@ -808,7 +808,7 @@ async function perform(action,value){
   if(!confirm("Déconnecter Intervals.icu et effacer sa clé enregistrée ainsi que sa copie locale ? Tes plans et sauvegardes personnelles seront conservés."))return;
   await clearDeviceCredential("intervals");state.deviceSaved=false;state.localSnapshot=false;state.sessionStatus="";
   state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode=DEMO?"demo":"disconnected";
-  state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
+  state.activities=[];state.strength=state.hevyKey?state.hevySessions:[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
   localStorage.removeItem(KEY_VAULT);draw();if(DEMO)await sync();return;
  }
  }catch(error){const msg=error?.message||"Action impossible";if(state.wizard&&$("wizardError")){$("wizardError").hidden=false;$("wizardError").textContent=msg;}else alertText(msg);}
