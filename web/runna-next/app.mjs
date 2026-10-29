@@ -500,10 +500,20 @@ async function sync(){
   state.planned=Array.isArray(data.planned)?data.planned:[];
   state.syncedAt=data.syncedAt||new Date().toISOString();
   state.sourceMode=data.demo?"demo":data.ok?"intervals":"partial";
+  state.localSnapshot=false;state.sessionStatus=data.demo?"Mode démonstration":"Dernière synchronisation : "+String(state.syncedAt||"").slice(0,16).replace("T"," ");
   state.syncNote=(data.warnings||[]).join(" · ");
+  if(!DEMO&&state.deviceSaved){
+   try{await saveDeviceDashboard({activities:state.activities,wellness:state.wellness,
+    strength:state.intervalsStrength,planned:state.planned,syncedAt:state.syncedAt});}
+   catch{state.syncNote+=(state.syncNote?" · ":"")+"Dernière copie hors ligne non mise à jour.";}
+  }
   if(state.hevyKey){try{await syncHevy();}catch(error){state.syncNote+=" · Hevy : "+error.message;}}
   draw();
- }catch(err){state.syncNote=err.message;alertText("Synchronisation : "+err.message);}
+ }catch(err){
+  state.syncNote=err.message;
+  if(state.localSnapshot)state.sessionStatus="Réseau indisponible : dernière synchronisation conservée sur cet appareil.";
+  alertText("Synchronisation : "+err.message);
+ }
 }
 function patchStatus(next){
  const id=state.selected;
@@ -574,6 +584,8 @@ async function perform(action,value){
   const previous=state.hevyKey;state.hevyKey=key;
   try{await syncHevy();}catch(error){state.hevyKey=previous;throw error;}
   if(pass)localStorage.setItem(HEVY_VAULT,await encryptApiKey(key,pass));
+  if($("rememberHevyDevice")?.checked)await saveDeviceCredential("hevy",key);
+  else await clearDeviceCredential("hevy");
   state.sheet=null;draw();alertText("Hevy Pro connecté : tes séances de musculation sont visibles.");return;
  }
  if(action==="hevyUnlock"){
@@ -582,11 +594,12 @@ async function perform(action,value){
   const key=await decryptApiKey(stored,$("hevyUnlockPass")?.value||"");
   state.hevyKey=key;
   try{await syncHevy();}catch(error){state.hevyKey=null;throw error;}
+  if($("rememberHevyUnlock")?.checked)await saveDeviceCredential("hevy",key);
   state.sheet=null;draw();alertText("Compte Hevy déverrouillé.");return;
  }
  if(action==="hevyDisconnect"){
   state.hevyKey=null;state.hevySessions=[];state.hevyFocus=null;state.hevyPartial=false;state.strength=state.intervalsStrength;
-  localStorage.removeItem(HEVY_VAULT);state.sheet=null;draw();return;
+  localStorage.removeItem(HEVY_VAULT);await clearDeviceCredential("hevy");state.sheet=null;draw();return;
  }
  if(action==="weatherLocation"||action==="weather"){state.sheet="weatherLocation";state.weatherResults=[];state.weatherQuery="";draw();return;}
  if(action==="weatherSearch"){await searchWeatherPlace();return;}
@@ -766,7 +779,12 @@ async function perform(action,value){
   try{const status=await api("/status");if(!status?.ok||!status?.intervals?.ok)throw Error("Authentification non confirmée.");}
   catch(error){state.connected=!!previous;state.apiToken=previous;throw error;}
   if(pass){const encrypted=await encryptApiKey(key,pass);localStorage.setItem(KEY_VAULT,encrypted);}
-  state.sheet=null;state.tab="activities";await sync();alertText("Compte Intervals.icu connecté. Tu peux maintenant publier tes séances.");return;
+  if($("rememberIntervalsDevice")?.checked){
+   await saveDeviceCredential("intervals",key);state.deviceSaved=true;
+  }else{await clearDeviceCredential("intervals");state.deviceSaved=false;}
+  state.localSnapshot=false;state.sessionStatus="Authentification Intervals.icu confirmée.";
+  state.sheet=null;state.tab="activities";await sync();
+  alertText(state.deviceSaved?"Compte Intervals.icu connecté et conservé sur cet appareil.":"Compte connecté pour cette session.");return;
  }
  if(action==="unlockNow"){
   if(DEMO)throw Error("Ouvre la version active.");
@@ -774,11 +792,17 @@ async function perform(action,value){
   const pass=$("apiUnlockPass").value;
   const key=await decryptApiKey(vault,pass);
   state.apiToken=key;state.connected=true;
-  try{const status=await api("/status");if(!status?.ok)throw Error("Connexion non confirmée.");}
+  try{const status=await api("/status");if(!status?.ok||!status?.intervals?.ok)throw Error("Connexion non confirmée.");}
   catch(error){state.connected=false;state.apiToken=null;throw error;}
-  state.sheet=null;state.tab="activities";await sync();alertText("Connexion Intervals.icu déverrouillée.");return;
+  if($("rememberIntervalsUnlock")?.checked){
+   await saveDeviceCredential("intervals",key);state.deviceSaved=true;
+  }
+  state.localSnapshot=false;state.sessionStatus="Authentification Intervals.icu confirmée.";
+  state.sheet=null;state.tab="activities";await sync();alertText("Connexion Intervals.icu déverrouillée et actualisée.");return;
  }
  if(action==="disconnect"){
+  if(!confirm("Déconnecter Intervals.icu et effacer sa clé enregistrée ainsi que sa copie locale ? Tes plans et sauvegardes personnelles seront conservés."))return;
+  await clearDeviceCredential("intervals");state.deviceSaved=false;state.localSnapshot=false;state.sessionStatus="";
   state.connected=false;state.apiOrigin=null;state.apiToken=null;state.sourceMode=DEMO?"demo":"disconnected";
   state.activities=[];state.strength=[];state.wellness=[];state.planned=[];state.activityFocus=null;state.activitySegments=null;state.sheet=null;
   localStorage.removeItem(KEY_VAULT);draw();if(DEMO)await sync();return;
@@ -790,6 +814,48 @@ document.addEventListener("click",ev=>{
  const [action,...rest]=trigger.dataset.action.split(":");
  perform(action,rest.join(":"));
 });
+async function restoreDeviceSession(){
+ if(DEMO)return;
+ try{
+  state.deviceSaved=await hasDeviceCredential("intervals");
+  const hasHevy=await hasDeviceCredential("hevy");
+  if(!state.deviceSaved&&!hasHevy)return;
+  state.sessionRestoring=true;draw();
+  if(state.deviceSaved){
+   const [token,cached]=await Promise.all([readDeviceCredential("intervals"),readDeviceDashboard()]);
+   if(token){
+    state.apiToken=token;state.connected=true;state.sessionStatus="Connexion mémorisée sur cet appareil.";
+    if(cached){
+     state.activities=uniqueRunningActivities(cached.activities);
+     state.wellness=cached.wellness;state.intervalsStrength=cached.strength;
+     state.planned=cached.planned;state.syncedAt=cached.syncedAt;
+     state.strength=state.hevySessions.length?state.hevySessions:state.intervalsStrength;
+     state.sourceMode="cached";state.localSnapshot=true;
+    }
+   }
+  }
+  if(hasHevy)try{state.hevyKey=await readDeviceCredential("hevy");}
+   catch{state.sessionStatus+=" · Hevy : données chiffrées non lisibles.";}
+  state.sessionRestoring=false;draw();
+  if(state.connected){
+   try{
+    const status=await api("/status");
+    if(!status?.ok||!status?.intervals?.ok)throw Error("Compte Intervals.icu non validé.");
+    await sync();
+   }catch(error){
+    state.syncNote=error.message;
+    state.sessionStatus="Connexion mémorisée, mais actualisation impossible : "+error.message;
+    // Network errors must not delete a valid encrypted key or cached activity history.
+    draw();
+   }
+  }else if(state.hevyKey)try{await syncHevy();}catch{}
+ }catch(error){
+  state.sessionRestoring=false;
+  state.sessionStatus="Restauration automatique indisponible : "+(error?.message||"erreur locale")+
+   ". Ouvre Plus → Intervals.icu pour reconnecter le compte.";
+  draw();
+ }
+}
 function start(){
  readLocal();
  const base=state.plan?.sessions.find(x=>x.date>=today())?.week;
@@ -798,7 +864,15 @@ function start(){
   try{state.plan=generateRunningPlan(sample(),today());state.week=0;}catch{}
  }
  draw();if(DEMO)sync();
+ else void restoreDeviceSession();
  if(state.weatherPlace)refreshWeather(state.weatherPlace).catch(()=>{});
 }
 start();
+let lastResume=0;
+function onResume(){
+ if(DEMO||!state.connected||document.visibilityState!=="visible"||Date.now()-lastResume<120000)return;
+ lastResume=Date.now();void sync();
+}
+document.addEventListener("visibilitychange",onResume);
+window.addEventListener("online",onResume);
 if ("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
