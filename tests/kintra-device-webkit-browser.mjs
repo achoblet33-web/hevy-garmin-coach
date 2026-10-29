@@ -24,6 +24,7 @@ try{
  await page.locator('button[data-action="connectNow"]').click();
  await page.getByText("WebKit trajet réel simulé").first().waitFor({timeout:20000});
  await page.reload({waitUntil:"domcontentloaded"});
+ await page.locator('.nav button[data-action="tab:activities"]').click();
  await page.getByText("WebKit trajet réel simulé").first().waitFor({timeout:25000});
  await page.locator('.nav button[data-action="tab:profile"]').click();
  await page.getByText(/Compte Intervals\.icu connecté · synchronisation active/).waitFor();
