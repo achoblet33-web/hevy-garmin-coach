@@ -149,6 +149,7 @@ try{
  await page.locator("button[data-action='wizardNext']").click();
  assert.match(await page.locator(".modal").innerText(),/Vérifier le nouveau plan/);
  await page.locator("button[data-action='acceptPlan']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  assert.match(await page.locator("#app").innerText(),/Objectif 5 km/);
  console.log("PASS: Four-step onboarding, plan preview and explicit adoption.");
  await page.locator(".nav button[data-action='tab:profile']").click();
@@ -162,6 +163,7 @@ try{
  await page.locator("button[data-action='wizardNext']").click();
  assert.match(await page.locator(".modal").innerText(),/Maintien/);
  await page.locator("button[data-action='acceptPlan']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  assert.match(await page.locator("#app").innerText(),/COACH · MODE MAINTIEN/);
  assert.doesNotMatch(await page.locator("#app").innerText(),/jours restants/);
  console.log("PASS: four-week maintenance plan has no fictional race.");
