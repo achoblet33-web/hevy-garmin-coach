@@ -134,7 +134,7 @@ try{
  assert.match(await page.locator("#app").innerText(),/Détail de la séance/);
  await page.locator(".kintra-session-metadata").waitFor();
  await page.screenshot({path:"test-artifacts/kintra-seance-mobile.png",fullPage:true});
- await page.locator("button[data-action='back']").click();
+ await page.locator("header button[data-action='back']").click();
  console.log("PASS: Session details and return.");
  await page.locator(".nav button[data-action='tab:profile']").click();
  await page.locator("button[data-action='setup']").click();
