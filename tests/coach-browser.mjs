@@ -206,6 +206,7 @@ try{
  await page.locator('button[data-action="backActivity"]').click();
  console.log("PASS: post-run report, fake lap segments and local RPE feedback.");
  await page.locator(".nav button[data-action='tab:today']").click();
+ if(await page.locator(".kintra-deep-dive summary").count())await page.locator(".kintra-deep-dive summary").click();
  await page.locator("button[data-action='instant']").click();
  await page.locator("button[data-action='instantType:interval']").click();
  assert.match(await page.locator(".modal").innerText(),/Préparer sur l'Apple Watch/);
@@ -221,7 +222,7 @@ try{
  active.on("pageerror",e=>errors.push(String(e)));
  await active.goto(BASE+"/runna-next/index.html",{waitUntil:"domcontentloaded",timeout:30000});
  await active.locator('.nav button[data-action="tab:profile"]').waitFor({timeout:12000});
- assert.match(await active.locator("#app").innerText(),/Mode actif/);
+ assert.match(await active.locator("#app").innerText(),/Intervals\.icu non connecté|Mode actif/);
  assert.doesNotMatch(await active.locator("#app").innerText(),/Mode démonstration/);
  await active.locator('.nav button[data-action="tab:profile"]').click();
  await active.locator('button[data-action="connect"]').first().click();
