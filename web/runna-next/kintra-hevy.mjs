@@ -50,8 +50,7 @@ export function renderHevyWorkoutDetail(workout){
  <strong>${n(set.weightKg)==null?"—":num(set.weightKg)+" kg"}</strong>
  <strong>${n(set.reps)==null?(n(set.durationSeconds)==null?"—":num(set.durationSeconds)+" s"):num(set.reps)}</strong>
  <span>${num(set.rpe)}</span></div>`).join("")}</div></section>`).join("");
- return `<button class="textButton" data-action="backHevy">‹ Toutes les séances Hevy</button>
- <div class="card kintra-hevy-detail" data-testid="hevy-workout-detail">
+ return `<div class="card kintra-hevy-detail" data-testid="hevy-workout-detail">
  <span class="eyebrow">HEVY PRO · SÉANCE TERMINÉE</span><h2>${escape(workout.title||"Musculation")}</h2>
  <p class="sub">${time(workout.startedAt)} · ${duration==null?"Durée non fournie":duration+" min"}</p>
  <div class="kintra-hevy-stats"><div><strong>${workout.exercises?.length||0}</strong><small>exercices</small></div>
